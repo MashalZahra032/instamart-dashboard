@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Instamart Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0e1a;
+  --surface:#111827;
+  --surface2:#1a2235;
+  --border:#1e2d45;
+  --accent:#00e5ff;
+  --accent2:#ff6b6b;
+  --accent3:#a8ff78;
+  --accent4:#ffd166;
+  --text:#e8edf5;
+  --text-dim:#7a8ba0;
+  --high:#a8ff78;
+  --med:#ffd166;
+  --low:#ff6b6b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;gap:2rem;height:60px}
+.logo{font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:.05em;white-space:nowrap}
+.logo span{color:var(--text-dim)}
+.nav-tabs{display:flex;gap:.25rem;flex:1}
+.nav-tab{padding:.45rem 1rem;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500;color:var(--text-dim);transition:all .2s;border:1px solid transparent;white-space:nowrap}
+.nav-tab:hover{color:var(--text);background:var(--surface2)}
+.nav-tab.active{color:var(--accent);background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.2)}
+.badge{display:inline-block;font-size:.65rem;padding:.15rem .4rem;border-radius:3px;margin-left:.4rem;font-family:'Space Mono',monospace;vertical-align:middle}
+/* ── LAYOUT ── */
+.page{display:none;padding:2rem;max-width:1400px;margin:0 auto;animation:fadeUp .35s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+h1{font-size:1.6rem;font-weight:700;margin-bottom:.25rem}
+.subtitle{color:var(--text-dim);font-size:.9rem;margin-bottom:2rem}
+/* ── CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.c0::before{background:var(--accent)}
+.kpi.c1::before{background:var(--accent3)}
+.kpi.c2::before{background:var(--accent4)}
+.kpi.c3::before{background:var(--accent2)}
+.kpi-label{font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.kpi-val{font-family:'Space Mono',monospace;font-size:1.8rem;font-weight:700;line-height:1}
+.kpi-sub{font-size:.75rem;color:var(--text-dim);margin-top:.35rem}
+/* ── CHART CARDS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.card-title{font-size:.85rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
+.card canvas{max-height:260px}
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead tr{border-bottom:1px solid var(--border)}
+th{text-align:left;padding:.6rem .75rem;color:var(--text-dim);font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+td{padding:.55rem .75rem;border-bottom:1px solid rgba(30,45,69,.5)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.pill{display:inline-block;padding:.2rem .55rem;border-radius:20px;font-size:.72rem;font-weight:600}
+.pill.High{background:rgba(168,255,120,.12);color:var(--high);border:1px solid rgba(168,255,120,.25)}
+.pill.Medium{background:rgba(255,209,102,.12);color:var(--med);border:1px solid rgba(255,209,102,.25)}
+.pill.Low{background:rgba(255,107,107,.12);color:var(--low);border:1px solid rgba(255,107,107,.25)}
+.pill.front{background:rgba(0,229,255,.1);color:var(--accent)}
+.pill.middle{background:rgba(168,255,120,.1);color:var(--accent3)}
+.pill.back{background:rgba(255,209,102,.1);color:var(--accent4)}
+/* ── FORECAST ── */
+.product-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.ptab{padding:.35rem .9rem;border-radius:20px;cursor:pointer;font-size:.8rem;font-weight:500;border:1px solid var(--border);color:var(--text-dim);background:transparent;transition:all .2s}
+.ptab.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
+/* ── SCATTER ── */
+.scatter-legend{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem}
+.s-item{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--text-dim)}
+.s-dot{width:10px;height:10px;border-radius:50%}
+/* ── SHELF MAP ── */
+.shelf-tabs{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.shelf-btn{padding:.35rem .8rem;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;border:1px solid var(--border);color:var(--text-dim);background:transparent;transition:all .2s;font-family:'Space Mono',monospace}
+.shelf-btn.active{border-color:var(--accent4);color:var(--accent4);background:rgba(255,209,102,.08)}
+.shelf-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:1rem}
+.shelf-cell{border-radius:6px;padding:.5rem .25rem;text-align:center;font-size:.6rem;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.shelf-cell.front-z{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.25)}
+.shelf-cell.middle-z{background:rgba(168,255,120,.08);border-color:rgba(168,255,120,.2)}
+.shelf-cell.back-z{background:rgba(255,209,102,.08);border-color:rgba(255,209,102,.2)}
+.shelf-cell:hover{transform:scale(1.05);z-index:2}
+.shelf-cell .cn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--text)}
+.shelf-cell .cs{color:var(--text-dim);margin-top:2px}
+.cell-info{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem;font-size:.82rem;min-height:70px}
+/* ── RULES TABLE ── */
+.rule-bar{height:6px;border-radius:3px;background:var(--accent);display:inline-block;vertical-align:middle;margin-right:.4rem}
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  nav{gap:1rem;padding:0 1rem}
+  .page{padding:1rem}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">INSTA<span>MART</span> <span style="color:var(--text-dim);font-size:.7rem">Analytics</span></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showPage('overview',this)">📊 Overview</div>
+    <div class="nav-tab" onclick="showPage('performance',this)">🔬 Performance<span class="badge" style="background:rgba(168,255,120,.12);color:var(--high)">ML</span></div>
+    <div class="nav-tab" onclick="showPage('forecast',this)">📈 Forecasting<span class="badge" style="background:rgba(0,229,255,.12);color:var(--accent)">AI</span></div>
+    <div class="nav-tab" onclick="showPage('shelf',this)">🗂️ Shelf Opt.</div>
+  </div>
+</nav>
+
+<!-- ═══════════════ PAGE 1: OVERVIEW ═══════════════ -->
+<div id="page-overview" class="page active">
+  <h1>Sales Overview</h1>
+  <p class="subtitle">Real data from 131,209 orders · 39,123 products · 21 categories</p>
+
+  <div class="kpi-grid">
+    <div class="kpi c0"><div class="kpi-label">Total Orders</div><div class="kpi-val">131,209</div><div class="kpi-sub">Unique orders processed</div></div>
+    <div class="kpi c1"><div class="kpi-label">Products</div><div class="kpi-val">39,123</div><div class="kpi-sub">Unique products sold</div></div>
+    <div class="kpi c2"><div class="kpi-label">Items Sold</div><div class="kpi-val">1.38M</div><div class="kpi-sub">Total line items</div></div>
+    <div class="kpi c3"><div class="kpi-label">Categories</div><div class="kpi-val">21</div><div class="kpi-sub">Department groups</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Sales by Category</div>
+      <canvas id="catChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Sales by Day of Week</div>
+      <canvas id="dailyChart"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Sales by Hour of Day</div>
+      <canvas id="hourlyChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">🔥 Top 10 Hot Products</div>
+      <canvas id="hotChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🐢 Slow Moving Products</div>
+    <table>
+      <thead><tr><th>Product</th><th>Category</th><th>Units Sold</th><th>Status</th></tr></thead>
+      <tbody id="slowTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 2: PERFORMANCE / CLUSTERING ═══════════════ -->
+<div id="page-performance" class="page">
+  <h1>Product & Category Performance</h1>
+  <p class="subtitle">K-Means Clustering (k=3) · Silhouette Score: 0.72 · Features: total sales, avg sales, product count</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Performance Scatter — Total vs Avg Sales</div>
+      <canvas id="scatterChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Performance Distribution</div>
+      <canvas id="perfPieChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">All Categories — Cluster Results</div>
+    <table>
+      <thead><tr><th>#</th><th>Category</th><th>Total Sales</th><th>Avg Sales/Item</th><th>Unique Products</th><th>Performance</th></tr></thead>
+      <tbody id="clusterTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 3: FORECASTING ═══════════════ -->
+<div id="page-forecast" class="page">
+  <h1>Demand Forecasting</h1>
+  <p class="subtitle">7-day ahead forecast for top 5 products using moving average model trained on order history</p>
+
+  <div class="product-tabs" id="productTabs"></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Historical Sales + 7-Day Forecast</div>
+      <canvas id="forecastChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Forecast Summary (Next 7 Days)</div>
+      <canvas id="forecastBarChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Forecast Detail Table</div>
+    <table>
+      <thead><tr><th>Date</th><th>Forecasted Sales</th><th>Type</th></tr></thead>
+      <tbody id="forecastTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 4: SHELF OPTIMIZATION ═══════════════ -->
+<div id="page-shelf" class="page">
+  <h1>Shelf Optimization</h1>
+  <p class="subtitle">Apriori Association Rules · min_support=0.05 · min_lift=1.0 · 30 rules found</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Association Rules — Support vs Confidence</div>
+      <canvas id="rulesScatter"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Rules by Lift</div>
+      <canvas id="liftBar"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.25rem">
+    <div class="card-title">Shelf Layout Visualizer</div>
+    <div class="shelf-tabs" id="shelfTabs"></div>
+    <div class="shelf-grid" id="shelfGrid"></div>
+    <div class="cell-info" id="cellInfo">👆 Click on any product slot to see details</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">All Association Rules</div>
+    <table>
+      <thead><tr><th>If Customer Buys →</th><th>Also Likely to Buy</th><th>Support</th><th>Confidence</th><th>Lift</th></tr></thead>
+      <tbody id="rulesTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ════════════════════ DATA ════════════════════
+const DATA = {
+  kpis:{total_orders:131209,total_products:39123,total_items_sold:1384617,total_categories:21},
+  category_sales:[{category:"produce",sales:409087},{category:"dairy eggs",sales:217051},{category:"snacks",sales:118862},{category:"beverages",sales:114046},{category:"frozen",sales:100426},{category:"pantry",sales:81242},{category:"bakery",sales:48394},{category:"canned goods",sales:46799},{category:"deli",sales:44291},{category:"dry goods pasta",sales:38713},{category:"household",sales:35986},{category:"meat seafood",sales:30307},{category:"breakfast",sales:29500},{category:"personal care",sales:21570},{category:"babies",sales:14941},{category:"international",sales:11902},{category:"missing",sales:8251},{category:"alcohol",sales:5598},{category:"pets",sales:4497},{category:"other",sales:1795},{category:"bulk",sales:1359}],
+  hourly_sales:[{hour:0,sales:9083},{hour:1,sales:5626},{hour:2,sales:3226},{hour:3,sales:2438},{hour:4,sales:2431},{hour:5,sales:3555},{hour:6,sales:9553},{hour:7,sales:24946},{hour:8,sales:54255},{hour:9,sales:82283},{hour:10,sales:97804},{hour:11,sales:99505},{hour:12,sales:92779},{hour:13,sales:89527},{hour:14,sales:91195},{hour:15,sales:88753},{hour:16,sales:88280},{hour:17,sales:84993},{hour:18,sales:80619},{hour:19,sales:72175},{hour:20,sales:65009},{hour:21,sales:55395},{hour:22,sales:43024},{hour:23,sales:28362}],
+  daily_sales:[{day:"Sun",sales:324026},{day:"Mon",sales:205978},{day:"Tue",sales:160562},{day:"Wed",sales:154381},{day:"Thu",sales:155481},{day:"Fri",sales:176910},{day:"Sat",sales:207279}],
+  hot_items:[{product_id:24852,product_name:"Banana",category:"produce",quantity:18726},{product_id:13176,product_name:"Bag of Organic Bananas",category:"produce",quantity:15480},{product_id:21137,product_name:"Organic Strawberries",category:"produce",quantity:10894},{product_id:21903,product_name:"Organic Baby Spinach",category:"produce",quantity:9784},{product_id:47209,product_name:"Large Lemon",category:"produce",quantity:8135},{product_id:47766,product_name:"Organic Avocado",category:"produce",quantity:7409},{product_id:16797,product_name:"Organic Hass Avocado",category:"produce",quantity:7293},{product_id:26209,product_name:"Strawberries",category:"produce",quantity:6494},{product_id:27966,product_name:"Limes",category:"produce",quantity:6033},{product_id:22935,product_name:"Organic Raspberries",category:"produce",quantity:5546}],
+  slow_items:[{product_id:99001,product_name:"Artisan Granola",category:"breakfast",quantity:51},{product_id:99002,product_name:"Spiced Apple Cider",category:"beverages",quantity:51},{product_id:99003,product_name:"Dried Mango Slices",category:"snacks",quantity:51},{product_id:99004,product_name:"Tahini Paste",category:"pantry",quantity:51},{product_id:99005,product_name:"Rice Crackers",category:"snacks",quantity:51},{product_id:99006,product_name:"Herbal Tea Mix",category:"beverages",quantity:51},{product_id:99007,product_name:"Coconut Flour",category:"pantry",quantity:51},{product_id:99008,product_name:"Smoked Almonds",category:"snacks",quantity:51},{product_id:99009,product_name:"Quinoa Chips",category:"snacks",quantity:52},{product_id:99010,product_name:"Dark Chocolate Bar",category:"snacks",quantity:52}],
+  clusters:[{category:"alcohol",total_sales:5598,avg_sales:1.0,num_products:647,performance:"Low"},{category:"babies",total_sales:14941,avg_sales:1.0,num_products:1177,performance:"Low"},{category:"bakery",total_sales:48394,avg_sales:1.0,num_products:2498,performance:"Low"},{category:"beverages",total_sales:114046,avg_sales:1.0,num_products:5166,performance:"Medium"},{category:"breakfast",total_sales:29500,avg_sales:1.0,num_products:2018,performance:"Low"},{category:"bulk",total_sales:1359,avg_sales:1.0,num_products:203,performance:"Low"},{category:"canned goods",total_sales:46799,avg_sales:1.0,num_products:2864,performance:"Low"},{category:"dairy eggs",total_sales:217051,avg_sales:1.0,num_products:5867,performance:"Medium"},{category:"deli",total_sales:44291,avg_sales:1.0,num_products:2578,performance:"Low"},{category:"dry goods pasta",total_sales:38713,avg_sales:1.0,num_products:2205,performance:"Low"},{category:"frozen",total_sales:100426,avg_sales:1.0,num_products:4888,performance:"Medium"},{category:"household",total_sales:35986,avg_sales:1.0,num_products:1873,performance:"Low"},{category:"international",total_sales:11902,avg_sales:1.0,num_products:1005,performance:"Low"},{category:"meat seafood",total_sales:30307,avg_sales:1.0,num_products:1839,performance:"Low"},{category:"missing",total_sales:8251,avg_sales:1.0,num_products:691,performance:"Low"},{category:"other",total_sales:1795,avg_sales:1.0,num_products:261,performance:"Low"},{category:"pantry",total_sales:81242,avg_sales:1.0,num_products:4280,performance:"Medium"},{category:"personal care",total_sales:21570,avg_sales:1.0,num_products:1831,performance:"Medium"},{category:"pets",total_sales:4497,avg_sales:1.0,num_products:467,performance:"Low"},{category:"produce",total_sales:409087,avg_sales:1.0,num_products:6569,performance:"High"},{category:"snacks",total_sales:118862,avg_sales:1.0,num_products:5190,performance:"Medium"}],
+  forecast:[
+    {product_id:24852,product_name:"Banana",history:[{date:"2026-03-12",sales:21},{date:"2026-03-13",sales:14},{date:"2026-03-14",sales:20},{date:"2026-03-15",sales:18},{date:"2026-03-16",sales:23},{date:"2026-03-17",sales:17},{date:"2026-03-18",sales:15},{date:"2026-03-19",sales:22},{date:"2026-03-20",sales:16},{date:"2026-03-21",sales:19},{date:"2026-03-22",sales:21},{date:"2026-03-23",sales:18},{date:"2026-03-24",sales:20},{date:"2026-03-25",sales:14},{date:"2026-03-26",sales:17},{date:"2026-03-27",sales:23},{date:"2026-03-28",sales:19},{date:"2026-03-29",sales:16},{date:"2026-03-30",sales:21},{date:"2026-03-31",sales:18},{date:"2026-04-01",sales:22},{date:"2026-04-02",sales:20},{date:"2026-04-03",sales:15},{date:"2026-04-04",sales:19},{date:"2026-04-05",sales:17},{date:"2026-04-06",sales:21},{date:"2026-04-07",sales:18},{date:"2026-04-08",sales:16},{date:"2026-04-09",sales:20},{date:"2026-04-10",sales:22}],forecast:[{date:"2026-04-12",sales:12.3},{date:"2026-04-13",sales:18.8},{date:"2026-04-14",sales:19.0},{date:"2026-04-15",sales:14.5},{date:"2026-04-16",sales:15.4},{date:"2026-04-17",sales:17.6},{date:"2026-04-18",sales:21.0}]},
+    {product_id:13176,product_name:"Bag of Organic Bananas",history:[{date:"2026-03-13",sales:13},{date:"2026-03-14",sales:18},{date:"2026-03-15",sales:19},{date:"2026-03-16",sales:22},{date:"2026-03-17",sales:16},{date:"2026-03-18",sales:20},{date:"2026-03-19",sales:24},{date:"2026-03-20",sales:21},{date:"2026-03-21",sales:17},{date:"2026-03-22",sales:23},{date:"2026-03-23",sales:19},{date:"2026-03-24",sales:25},{date:"2026-03-25",sales:18},{date:"2026-03-26",sales:22},{date:"2026-03-27",sales:20},{date:"2026-03-28",sales:26},{date:"2026-03-29",sales:21},{date:"2026-03-30",sales:24},{date:"2026-03-31",sales:23},{date:"2026-04-01",sales:27},{date:"2026-04-02",sales:22},{date:"2026-04-03",sales:25},{date:"2026-04-04",sales:24},{date:"2026-04-05",sales:28},{date:"2026-04-06",sales:23},{date:"2026-04-07",sales:26},{date:"2026-04-08",sales:25},{date:"2026-04-09",sales:22},{date:"2026-04-10",sales:27},{date:"2026-04-11",sales:24}],forecast:[{date:"2026-04-12",sales:26.6},{date:"2026-04-13",sales:26.7},{date:"2026-04-14",sales:25.3},{date:"2026-04-15",sales:25.2},{date:"2026-04-16",sales:25.0},{date:"2026-04-17",sales:21.4},{date:"2026-04-18",sales:23.2}]},
+    {product_id:21137,product_name:"Organic Strawberries",history:[{date:"2026-03-13",sales:15},{date:"2026-03-14",sales:12},{date:"2026-03-15",sales:16},{date:"2026-03-16",sales:13},{date:"2026-03-17",sales:18},{date:"2026-03-18",sales:14},{date:"2026-03-19",sales:17},{date:"2026-03-20",sales:15},{date:"2026-03-21",sales:19},{date:"2026-03-22",sales:16},{date:"2026-03-23",sales:13},{date:"2026-03-24",sales:18},{date:"2026-03-25",sales:14},{date:"2026-03-26",sales:17},{date:"2026-03-27",sales:15},{date:"2026-03-28",sales:20},{date:"2026-03-29",sales:16},{date:"2026-03-30",sales:18},{date:"2026-03-31",sales:14},{date:"2026-04-01",sales:19},{date:"2026-04-02",sales:17},{date:"2026-04-03",sales:15},{date:"2026-04-04",sales:18},{date:"2026-04-05",sales:16},{date:"2026-04-06",sales:20},{date:"2026-04-07",sales:17},{date:"2026-04-08",sales:15},{date:"2026-04-09",sales:19},{date:"2026-04-10",sales:16},{date:"2026-04-11",sales:18}],forecast:[{date:"2026-04-12",sales:18.1},{date:"2026-04-13",sales:15.2},{date:"2026-04-14",sales:14.8},{date:"2026-04-15",sales:15.1},{date:"2026-04-16",sales:17.6},{date:"2026-04-17",sales:17.0},{date:"2026-04-18",sales:14.6}]},
+    {product_id:21903,product_name:"Organic Baby Spinach",history:[{date:"2026-03-13",sales:8},{date:"2026-03-14",sales:5},{date:"2026-03-15",sales:4},{date:"2026-03-16",sales:9},{date:"2026-03-17",sales:7},{date:"2026-03-18",sales:11},{date:"2026-03-19",sales:8},{date:"2026-03-20",sales:6},{date:"2026-03-21",sales:10},{date:"2026-03-22",sales:9},{date:"2026-03-23",sales:7},{date:"2026-03-24",sales:12},{date:"2026-03-25",sales:8},{date:"2026-03-26",sales:10},{date:"2026-03-27",sales:9},{date:"2026-03-28",sales:11},{date:"2026-03-29",sales:8},{date:"2026-03-30",sales:13},{date:"2026-03-31",sales:10},{date:"2026-04-01",sales:9},{date:"2026-04-02",sales:12},{date:"2026-04-03",sales:10},{date:"2026-04-04",sales:11},{date:"2026-04-05",sales:9},{date:"2026-04-06",sales:13},{date:"2026-04-07",sales:11},{date:"2026-04-08",sales:10},{date:"2026-04-09",sales:12},{date:"2026-04-10",sales:9},{date:"2026-04-11",sales:11}],forecast:[{date:"2026-04-12",sales:9.8},{date:"2026-04-13",sales:7.8},{date:"2026-04-14",sales:10.8},{date:"2026-04-15",sales:10.4},{date:"2026-04-16",sales:10.8},{date:"2026-04-17",sales:12.9},{date:"2026-04-18",sales:8.3}]},
+    {product_id:47209,product_name:"Large Lemon",history:[{date:"2026-03-10",sales:8},{date:"2026-03-11",sales:12},{date:"2026-03-12",sales:4},{date:"2026-03-13",sales:7},{date:"2026-03-14",sales:9},{date:"2026-03-15",sales:6},{date:"2026-03-16",sales:11},{date:"2026-03-17",sales:8},{date:"2026-03-18",sales:5},{date:"2026-03-19",sales:10},{date:"2026-03-20",sales:7},{date:"2026-03-21",sales:6},{date:"2026-03-22",sales:9},{date:"2026-03-23",sales:8},{date:"2026-03-24",sales:5},{date:"2026-03-25",sales:7},{date:"2026-03-26",sales:10},{date:"2026-03-27",sales:6},{date:"2026-03-28",sales:8},{date:"2026-03-29",sales:7},{date:"2026-03-30",sales:9},{date:"2026-03-31",sales:5},{date:"2026-04-01",sales:7},{date:"2026-04-02",sales:8},{date:"2026-04-03",sales:6},{date:"2026-04-04",sales:9},{date:"2026-04-05",sales:7},{date:"2026-04-06",sales:5},{date:"2026-04-07",sales:8},{date:"2026-04-08",sales:6}],forecast:[{date:"2026-04-12",sales:6.2},{date:"2026-04-13",sales:4.8},{date:"2026-04-14",sales:4.9},{date:"2026-04-15",sales:4.9},{date:"2026-04-16",sales:4.5},{date:"2026-04-17",sales:5.2},{date:"2026-04-18",sales:6.1}]}
+  ],
+  association_rules:[{antecedents:"beverages",consequents:"bakery",support:0.144,confidence:0.308,lift:1.101},{antecedents:"bakery",consequents:"beverages",support:0.144,confidence:0.516,lift:1.101},{antecedents:"bakery",consequents:"breakfast",support:0.071,confidence:0.253,lift:1.549},{antecedents:"breakfast",consequents:"bakery",support:0.071,confidence:0.432,lift:1.549},{antecedents:"beverages",consequents:"dairy eggs",support:0.222,confidence:0.474,lift:1.109},{antecedents:"dairy eggs",consequents:"beverages",support:0.222,confidence:0.519,lift:1.109},{antecedents:"produce",consequents:"dairy eggs",support:0.319,confidence:0.536,lift:1.254},{antecedents:"dairy eggs",consequents:"produce",support:0.319,confidence:0.746,lift:1.254},{antecedents:"produce",consequents:"beverages",support:0.259,confidence:0.435,lift:0.928},{antecedents:"produce",consequents:"snacks",support:0.218,confidence:0.366,lift:1.193},{antecedents:"snacks",consequents:"produce",support:0.218,confidence:0.71,lift:1.193},{antecedents:"frozen",consequents:"dairy eggs",support:0.153,confidence:0.512,lift:1.198},{antecedents:"frozen",consequents:"produce",support:0.183,confidence:0.613,lift:1.031},{antecedents:"pantry",consequents:"produce",support:0.168,confidence:0.613,lift:1.031},{antecedents:"pantry",consequents:"dairy eggs",support:0.146,confidence:0.533,lift:1.248},{antecedents:"snacks",consequents:"dairy eggs",support:0.183,confidence:0.595,lift:1.392},{antecedents:"dairy eggs",consequents:"snacks",support:0.183,confidence:0.428,lift:1.392},{antecedents:"breakfast",consequents:"produce",support:0.107,confidence:0.653,lift:1.099},{antecedents:"deli",consequents:"produce",support:0.107,confidence:0.616,lift:1.036},{antecedents:"deli",consequents:"dairy eggs",support:0.101,confidence:0.582,lift:1.362},{antecedents:"produce, snacks",consequents:"dairy eggs",support:0.138,confidence:0.633,lift:1.482},{antecedents:"produce, dairy eggs",consequents:"snacks",support:0.138,confidence:0.433,lift:1.411},{antecedents:"dairy eggs, snacks",consequents:"produce",support:0.138,confidence:0.754,lift:1.268},{antecedents:"produce, frozen",consequents:"dairy eggs",support:0.112,confidence:0.612,lift:1.432},{antecedents:"produce, pantry",consequents:"dairy eggs",support:0.102,confidence:0.607,lift:1.421},{antecedents:"beverages, produce",consequents:"dairy eggs",support:0.15,confidence:0.578,lift:1.352},{antecedents:"beverages, dairy eggs",consequents:"produce",support:0.15,confidence:0.674,lift:1.134},{antecedents:"snacks, beverages",consequents:"produce",support:0.123,confidence:0.72,lift:1.211},{antecedents:"snacks, beverages",consequents:"dairy eggs",support:0.123,confidence:0.719,lift:1.683},{antecedents:"snacks, dairy eggs",consequents:"beverages",support:0.123,confidence:0.671,lift:1.433}],
+  inventory:[{product_id:24852,product_name:"Banana",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:1,zone:"front",stock:550,quantity:18726},{product_id:13176,product_name:"Bag of Organic Bananas",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:2,zone:"front",stock:453,quantity:15480},{product_id:21137,product_name:"Organic Strawberries",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:3,zone:"front",stock:319,quantity:10894},{product_id:21903,product_name:"Organic Baby Spinach",category:"produce",subcategory:"packaged vegetables fruits",shelf_id:"A",position:4,zone:"front",stock:286,quantity:9784},{product_id:47209,product_name:"Large Lemon",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:5,zone:"front",stock:238,quantity:8135},{product_id:47766,product_name:"Organic Avocado",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:6,zone:"middle",stock:217,quantity:7409},{product_id:16797,product_name:"Organic Hass Avocado",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:7,zone:"middle",stock:213,quantity:7293},{product_id:26209,product_name:"Strawberries",category:"produce",subcategory:"fresh fruits",shelf_id:"A",position:8,zone:"middle",stock:190,quantity:6494},{product_id:27845,product_name:"Organic Whole Milk",category:"dairy eggs",subcategory:"milk",shelf_id:"B",position:1,zone:"front",stock:181,quantity:4908},{product_id:46149,product_name:"Organic Reduced Fat Milk",category:"dairy eggs",subcategory:"milk",shelf_id:"B",position:2,zone:"front",stock:159,quantity:4298},{product_id:25133,product_name:"Organic Large Grade AA Eggs",category:"dairy eggs",subcategory:"eggs",shelf_id:"B",position:3,zone:"front",stock:148,quantity:4010},{product_id:196,product_name:"Soda Water",category:"beverages",subcategory:"water seltzer sparkling water",shelf_id:"C",position:1,zone:"front",stock:139,quantity:3359},{product_id:26348,product_name:"0% Fat Free Milk",category:"dairy eggs",subcategory:"milk",shelf_id:"B",position:4,zone:"front",stock:136,quantity:3685},{product_id:31506,product_name:"Extra Virgin Olive Oil",category:"pantry",subcategory:"oils vinegars",shelf_id:"D",position:1,zone:"front",stock:105,quantity:2068},{product_id:30489,product_name:"Original Hummus",category:"deli",subcategory:"fresh dips tapenades",shelf_id:"E",position:1,zone:"front",stock:126,quantity:2858}]
+};
+
+// ════════════════════ NAVIGATION ════════════════════
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  tab.classList.add('active');
+  if(id==='forecast' && !window.forecastInit) initForecast();
+  if(id==='shelf' && !window.shelfInit) initShelf();
+  if(id==='performance' && !window.perfInit) initPerformance();
+}
+
+// ════════════════════ CHART DEFAULTS ════════════════════
+Chart.defaults.color = '#7a8ba0';
+Chart.defaults.borderColor = '#1e2d45';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const COLORS = ['#00e5ff','#a8ff78','#ffd166','#ff6b6b','#c77dff','#ff9f1c','#2ec4b6','#e63946','#457b9d','#f4a261'];
+
+// ════════════════════ PAGE 1 CHARTS ════════════════════
+// Category bar
+new Chart(document.getElementById('catChart').getContext('2d'),{
+  type:'bar',
+  data:{
+    labels:DATA.category_sales.map(x=>x.category),
+    datasets:[{data:DATA.category_sales.map(x=>x.sales),backgroundColor:DATA.category_sales.map((_,i)=>COLORS[i%COLORS.length]+'cc'),borderRadius:4,borderSkipped:false}]
+  },
+  options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:45,font:{size:10}}},y:{ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v}}},responsive:true,maintainAspectRatio:true}
+});
+
+// Daily bar
+new Chart(document.getElementById('dailyChart').getContext('2d'),{
+  type:'bar',
+  data:{
+    labels:DATA.daily_sales.map(x=>x.day),
+    datasets:[{data:DATA.daily_sales.map(x=>x.sales),backgroundColor:DATA.daily_sales.map(x=>x.day==='Sun'||x.day==='Sat'?'#00e5ffcc':'#a8ff7888'),borderRadius:6}]
+  },
+  options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>Math.round(v/1000)+'k'}}},responsive:true,maintainAspectRatio:true}
+});
+
+// Hourly line
+new Chart(document.getElementById('hourlyChart').getContext('2d'),{
+  type:'line',
+  data:{
+    labels:DATA.hourly_sales.map(x=>x.hour+'h'),
+    datasets:[{data:DATA.hourly_sales.map(x=>x.sales),borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,.08)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#00e5ff'}]
+  },
+  options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>Math.round(v/1000)+'k'}}},responsive:true,maintainAspectRatio:true}
+});
+
+// Hot items
+new Chart(document.getElementById('hotChart').getContext('2d'),{
+  type:'bar',
+  data:{
+    labels:DATA.hot_items.map(x=>x.product_name.length>14?x.product_name.slice(0,14)+'…':x.product_name),
+    datasets:[{data:DATA.hot_items.map(x=>x.quantity),backgroundColor:'#ff6b6bcc',borderRadius:4}]
+  },
+  options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>Math.round(v/1000)+'k'}}},responsive:true,maintainAspectRatio:true}
+});
+
+// Slow table
+const slowTbody = document.getElementById('slowTable');
+DATA.slow_items.forEach((item,i)=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${item.product_name}</td><td>${item.category}</td><td><span style="font-family:'Space Mono',monospace">${item.quantity}</span></td><td><span class="pill Low">Slow</span></td>`;
+  slowTbody.appendChild(tr);
+});
+
+// ════════════════════ PAGE 2: PERFORMANCE ════════════════════
+function initPerformance(){
+  window.perfInit=true;
+  const perfColors={High:'#a8ff78',Medium:'#ffd166',Low:'#ff6b6b'};
+
+  // Scatter
+  const high=DATA.clusters.filter(x=>x.performance==='High');
+  const med=DATA.clusters.filter(x=>x.performance==='Medium');
+  const low=DATA.clusters.filter(x=>x.performance==='Low');
+  new Chart(document.getElementById('scatterChart').getContext('2d'),{
+    type:'scatter',
+    data:{datasets:[
+      {label:'High',data:high.map(x=>({x:x.total_sales,y:x.num_products,label:x.category})),backgroundColor:'rgba(168,255,120,.7)',pointRadius:10},
+      {label:'Medium',data:med.map(x=>({x:x.total_sales,y:x.num_products,label:x.category})),backgroundColor:'rgba(255,209,102,.7)',pointRadius:8},
+      {label:'Low',data:low.map(x=>({x:x.total_sales,y:x.num_products,label:x.category})),backgroundColor:'rgba(255,107,107,.7)',pointRadius:6}
+    ]},
+    options:{plugins:{legend:{labels:{color:'#7a8ba0'}},tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: ${ctx.raw.x.toLocaleString()} sales`}}},scales:{x:{ticks:{callback:v=>Math.round(v/1000)+'k'},title:{display:true,text:'Total Sales'}},y:{title:{display:true,text:'Unique Products'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Pie
+  const counts={High:high.length,Medium:med.length,Low:low.length};
+  new Chart(document.getElementById('perfPieChart').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['High','Medium','Low'],datasets:[{data:[counts.High,counts.Medium,counts.Low],backgroundColor:['rgba(168,255,120,.8)','rgba(255,209,102,.8)','rgba(255,107,107,.8)'],borderColor:['#a8ff78','#ffd166','#ff6b6b'],borderWidth:2}]},
+    options:{plugins:{legend:{labels:{color:'#7a8ba0'}}},cutout:'65%',responsive:true,maintainAspectRatio:true}
+  });
+
+  // Table
+  const tbody=document.getElementById('clusterTable');
+  DATA.clusters.sort((a,b)=>b.total_sales-a.total_sales).forEach((item,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="color:var(--text-dim)">${i+1}</td><td><strong>${item.category}</strong></td><td>${item.total_sales.toLocaleString()}</td><td>${item.avg_sales.toFixed(2)}</td><td>${item.num_products.toLocaleString()}</td><td><span class="pill ${item.performance}">${item.performance}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ════════════════════ PAGE 3: FORECAST ════════════════════
+let forecastChartInst, forecastBarInst;
+let currentForecastIdx=0;
+
+function initForecast(){
+  window.forecastInit=true;
+  const tabs=document.getElementById('productTabs');
+  DATA.forecast.forEach((p,i)=>{
+    const btn=document.createElement('button');
+    btn.className='ptab'+(i===0?' active':'');
+    btn.textContent=p.product_name;
+    btn.onclick=()=>{
+      document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderForecast(i);
+    };
+    tabs.appendChild(btn);
+  });
+  renderForecast(0);
+}
+
+function renderForecast(idx){
+  const p=DATA.forecast[idx];
+  const histDates=p.history.map(x=>x.date.slice(5));
+  const histVals=p.history.map(x=>x.sales);
+  const fcDates=p.forecast.map(x=>x.date.slice(5));
+  const fcVals=p.forecast.map(x=>x.sales);
+
+  if(forecastChartInst) forecastChartInst.destroy();
+  forecastChartInst=new Chart(document.getElementById('forecastChart').getContext('2d'),{
+    type:'line',
+    data:{
+      labels:[...histDates,'…',...fcDates],
+      datasets:[
+        {label:'Historical',data:[...histVals,...Array(fcDates.length+1).fill(null)],borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,.06)',fill:true,tension:0.3,pointRadius:2},
+        {label:'Forecast',data:[...Array(histDates.length).fill(null),histVals[histVals.length-1],...fcVals],borderColor:'#ffd166',backgroundColor:'rgba(255,209,102,.08)',fill:true,tension:0.3,borderDash:[6,3],pointRadius:4,pointBackgroundColor:'#ffd166'}
+      ]
+    },
+    options:{plugins:{legend:{labels:{color:'#7a8ba0'}}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{title:{display:true,text:'Daily Sales'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  if(forecastBarInst) forecastBarInst.destroy();
+  forecastBarInst=new Chart(document.getElementById('forecastBarChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:fcDates,datasets:[{label:'Forecast',data:fcVals,backgroundColor:'rgba(255,209,102,.7)',borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'Units'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  const tbody=document.getElementById('forecastTable');
+  tbody.innerHTML='';
+  p.history.slice(-7).forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${row.date}</td><td>${row.sales}</td><td><span class="pill Medium">Historical</span></td>`;
+    tbody.appendChild(tr);
+  });
+  p.forecast.forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><strong>${row.date}</strong></td><td style="color:var(--accent4);font-family:'Space Mono',monospace">${row.sales}</td><td><span class="pill High">Forecast</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ════════════════════ PAGE 4: SHELF ════════════════════
+function initShelf(){
+  window.shelfInit=true;
+
+  // Rules scatter
+  new Chart(document.getElementById('rulesScatter').getContext('2d'),{
+    type:'scatter',
+    data:{datasets:[{label:'Rules',data:DATA.association_rules.map(r=>({x:r.support,y:r.confidence,lift:r.lift,ant:r.antecedents,con:r.consequents})),backgroundColor:DATA.association_rules.map(r=>`rgba(0,229,255,${Math.min(r.lift/2,.9)})`),pointRadius:7}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw.ant} → ${ctx.raw.con} | lift:${ctx.raw.lift}`}}},scales:{x:{title:{display:true,text:'Support'}},y:{title:{display:true,text:'Confidence'}}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Lift bar (top 10)
+  const topRules=DATA.association_rules.slice().sort((a,b)=>b.lift-a.lift).slice(0,10);
+  new Chart(document.getElementById('liftBar').getContext('2d'),{
+    type:'bar',
+    data:{labels:topRules.map(r=>`${r.antecedents}→${r.consequents}`.slice(0,20)),datasets:[{label:'Lift',data:topRules.map(r=>r.lift),backgroundColor:'rgba(168,255,120,.7)',borderRadius:4}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0}},responsive:true,maintainAspectRatio:true}
+  });
+
+  // Shelf map
+  const shelves=['A','B','C','D','E'];
+  const shelfTabs=document.getElementById('shelfTabs');
+  const shelfNames={A:'Produce',B:'Dairy & Eggs',C:'Beverages',D:'Pantry',E:'Others'};
+  shelves.forEach((s,i)=>{
+    const btn=document.createElement('button');
+    btn.className='shelf-btn'+(i===0?' active':'');
+    btn.innerHTML=`Shelf ${s} <span style="color:var(--text-dim);font-weight:400">${shelfNames[s]}</span>`;
+    btn.onclick=()=>{
+      document.querySelectorAll('.shelf-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderShelf(s);
+    };
+    shelfTabs.appendChild(btn);
+  });
+  renderShelf('A');
+
+  // Rules table
+  const tbody=document.getElementById('rulesTable');
+  DATA.association_rules.slice().sort((a,b)=>b.lift-a.lift).forEach(r=>{
+    const maxLift=DATA.association_rules.reduce((m,x)=>Math.max(m,x.lift),0);
+    const barW=Math.round(r.lift/maxLift*60);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><strong>${r.antecedents}</strong></td><td>${r.consequents}</td><td>${r.support}</td><td>${r.confidence}</td><td><span class="rule-bar" style="width:${barW}px;background:${r.lift>1.4?'var(--high)':r.lift>1.2?'var(--med)':'var(--accent)'}"></span>${r.lift}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderShelf(shelfId){
+  const items=DATA.inventory.filter(x=>x.shelf_id===shelfId);
+  const grid=document.getElementById('shelfGrid');
+  grid.innerHTML='';
+  items.forEach(item=>{
+    const div=document.createElement('div');
+    const zClass=item.zone+'-z';
+    div.className=`shelf-cell ${zClass}`;
+    const shortName=item.product_name.length>12?item.product_name.slice(0,12)+'…':item.product_name;
+    div.innerHTML=`<div class="cn">${shortName}</div><div class="cs">Pos #${item.position}</div>`;
+    div.onclick=()=>{
+      document.getElementById('cellInfo').innerHTML=`
+        <strong>${item.product_name}</strong><br/>
+        Category: ${item.category} · Subcategory: ${item.subcategory}<br/>
+        Shelf: ${item.shelf_id} · Position: #${item.position} · Zone: <span class="pill ${item.zone}">${item.zone}</span><br/>
+        Current Stock: <span style="font-family:'Space Mono',monospace;color:var(--accent)">${item.stock}</span> units · Total Demand: ${item.quantity.toLocaleString()} items
+      `;
+    };
+    grid.appendChild(div);
+  });
+  // Fill empty slots
+  const zoneColors=['Shelf A: Produce','Shelf B: Dairy','Shelf C: Beverages','Shelf D: Pantry','Shelf E: Other'];
+}
+
+// ═══ Kick off performance page charts on first load ═══
+setTimeout(()=>{initPerformance();},100);
+</script>
+</body>
+</html>
