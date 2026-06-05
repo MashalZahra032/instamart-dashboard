@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Instamart — Live Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f7f5f0;
+  --surface:#ffffff;
+  --surface2:#f0ede6;
+  --border:#e0dbd0;
+  --ink:#1a1a18;
+  --ink2:#5a5a50;
+  --ink3:#9a9a8a;
+  --accent:#ff4f1f;
+  --accent2:#2d7dd2;
+  --accent3:#06a77d;
+  --accent4:#f4a400;
+  --high:#06a77d;
+  --med:#f4a400;
+  --low:#ff4f1f;
+  --shadow:0 2px 16px rgba(0,0,0,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+/* ── HEADER ── */
+header{background:var(--ink);padding:0 2rem;display:flex;align-items:center;gap:2rem;height:58px;position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:#fff;letter-spacing:-.01em}
+.logo em{color:var(--accent);font-style:normal}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);box-shadow:0 0 0 0 rgba(6,167,125,.4);animation:pulse 2s infinite;margin-left:.5rem}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(6,167,125,.4)}70%{box-shadow:0 0 0 8px rgba(6,167,125,0)}100%{box-shadow:0 0 0 0 rgba(6,167,125,0)}}
+.live-label{font-size:.72rem;color:#aaa;display:flex;align-items:center;gap:.35rem}
+.spacer{flex:1}
+.nav-btns{display:flex;gap:.25rem}
+.nav-btn{padding:.4rem 1rem;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:500;color:#aaa;background:transparent;border:1px solid transparent;transition:all .2s;font-family:'Inter',sans-serif;white-space:nowrap}
+.nav-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-btn.active{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.15)}
+
+/* ── PAGES ── */
+.page{display:none;padding:2rem;max-width:1300px;margin:0 auto;animation:fadeIn .3s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page-header{margin-bottom:2rem}
+.page-header h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1.1}
+.page-header p{color:var(--ink2);margin-top:.4rem;font-size:.9rem}
+
+/* ── CARDS / GRID ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;box-shadow:var(--shadow)}
+.kpi-label{font-size:.72rem;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.kpi-val{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1;color:var(--ink)}
+.kpi-sub{font-size:.75rem;color:var(--ink3);margin-top:.3rem}
+.kpi.accent .kpi-val{color:var(--accent)}
+.kpi.green .kpi-val{color:var(--accent3)}
+.kpi.blue .kpi-val{color:var(--accent2)}
+.kpi.gold .kpi-val{color:var(--accent4)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;box-shadow:var(--shadow)}
+.card-title{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem}
+.card canvas{max-height:240px}
+
+/* ── ORDER FORM ── */
+.order-wrap{display:grid;grid-template-columns:1.2fr 1fr;gap:1.5rem;align-items:start}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;box-shadow:var(--shadow)}
+.form-card h2{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:.4rem}
+.form-card p{color:var(--ink2);font-size:.88rem;margin-bottom:1.75rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--ink2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em}
+input,select{width:100%;padding:.75rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);transition:border .2s,box-shadow .2s;outline:none}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,79,31,.1)}
+.btn-submit{width:100%;padding:.9rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.5rem}
+.btn-submit:hover{background:#e03d0e;transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,79,31,.3)}
+.btn-submit:disabled{background:#ccc;cursor:not-allowed;transform:none;box-shadow:none}
+.success-msg{display:none;background:rgba(6,167,125,.08);border:1px solid rgba(6,167,125,.25);border-radius:10px;padding:1rem;color:var(--accent3);font-size:.88rem;margin-top:1rem;font-weight:500}
+.error-msg{display:none;background:rgba(255,79,31,.08);border:1px solid rgba(255,79,31,.2);border-radius:10px;padding:1rem;color:var(--accent);font-size:.88rem;margin-top:1rem}
+
+/* ── CART ── */
+.cart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;box-shadow:var(--shadow);position:sticky;top:74px}
+.cart-card h3{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1rem}
+.cart-empty{color:var(--ink3);font-size:.85rem;text-align:center;padding:1.5rem 0}
+.cart-item{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.85rem}
+.cart-item:last-child{border-bottom:none}
+.ci-name{font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-qty{color:var(--ink3)}
+.ci-price{font-weight:600;color:var(--accent)}
+.ci-del{cursor:pointer;color:var(--ink3);font-size:.75rem;padding:.2rem .4rem;border-radius:4px;transition:all .2s}
+.ci-del:hover{color:var(--accent);background:rgba(255,79,31,.08)}
+.cart-total{display:flex;justify-content:space-between;padding-top:.75rem;margin-top:.25rem;border-top:2px solid var(--ink);font-weight:700;font-family:'Syne',sans-serif}
+.btn-cart-order{width:100%;padding:.75rem;background:var(--ink);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.75rem}
+.btn-cart-order:hover{background:#333;transform:translateY(-1px)}
+.btn-cart-order:disabled{background:#ccc;cursor:not-allowed;transform:none}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead tr{border-bottom:2px solid var(--border)}
+th{text-align:left;padding:.65rem .75rem;font-size:.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em}
+td{padding:.6rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,0,0,.015)}
+.pill{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600}
+.pill-green{background:rgba(6,167,125,.1);color:var(--accent3);border:1px solid rgba(6,167,125,.2)}
+.pill-orange{background:rgba(244,164,0,.1);color:var(--accent4);border:1px solid rgba(244,164,0,.2)}
+.pill-red{background:rgba(255,79,31,.1);color:var(--accent);border:1px solid rgba(255,79,31,.2)}
+.pill-blue{background:rgba(45,125,210,.1);color:var(--accent2);border:1px solid rgba(45,125,210,.2)}
+
+/* ── MY ORDERS ── */
+.order-lookup{display:flex;gap:.75rem;margin-bottom:1.5rem}
+.order-lookup input{flex:1;max-width:320px}
+.btn-look{padding:.75rem 1.5rem;background:var(--accent2);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;font-size:.88rem;white-space:nowrap}
+.btn-look:hover{background:#1d6dbf}
+
+/* ── ADMIN ── */
+.admin-lock{text-align:center;padding:3rem 1rem}
+.admin-lock h2{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;margin-bottom:.5rem}
+.admin-lock p{color:var(--ink2);margin-bottom:1.5rem}
+.admin-pin-wrap{display:flex;gap:.75rem;justify-content:center;max-width:320px;margin:0 auto}
+.admin-pin-wrap input{flex:1}
+.btn-unlock{padding:.75rem 1.25rem;background:var(--ink);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer}
+.admin-panel{display:none}
+
+/* ── REFRESH BAR ── */
+.refresh-bar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;font-size:.8rem;color:var(--ink3)}
+.refresh-bar span{font-weight:500}
+.btn-refresh{padding:.35rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.78rem;font-family:'Inter',sans-serif;color:var(--ink2);transition:all .2s}
+.btn-refresh:hover{background:var(--surface2)}
+.spinner{display:none;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:3rem 1rem;color:var(--ink3)}
+.empty-icon{font-size:2.5rem;margin-bottom:.5rem}
+.empty p{font-size:.88rem}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){.kpi-row,.grid2,.grid3{grid-template-columns:1fr 1fr}.order-wrap{grid-template-columns:1fr}}
+@media(max-width:600px){.kpi-row{grid-template-columns:1fr 1fr}.page{padding:1rem}header{gap:.75rem;padding:0 1rem}.nav-btn{padding:.35rem .6rem;font-size:.75rem}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">INSTA<em>MART</em></div>
+  <div class="live-label"><div class="live-dot"></div>Live</div>
+  <div class="spacer"></div>
+  <div class="nav-btns">
+    <button class="nav-btn active" onclick="showPage('order',this)">🛒 Place Order</button>
+    <button class="nav-btn" onclick="showPage('dashboard',this)">📊 Live Dashboard</button>
+    <button class="nav-btn" onclick="showPage('myorders',this)">📋 My Orders</button>
+    <button class="nav-btn" onclick="showPage('admin',this)">🔐 Admin</button>
+  </div>
+</header>
+
+<!-- ══════════════ PAGE: PLACE ORDER ══════════════ -->
+<div id="page-order" class="page active">
+  <div class="page-header">
+    <h1>Place an Order</h1>
+    <p>Select a product, add to cart, and submit your order — charts update live!</p>
+  </div>
+  <div class="order-wrap">
+    <div class="form-card">
+      <h2>Add to Cart</h2>
+      <p>Choose a product and quantity to add to your cart</p>
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="custName" placeholder="e.g. Ahmed Khan"/>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="catSelect" onchange="filterProducts()">
+          <option value="">— Select Category —</option>
+          <option>produce</option><option>dairy eggs</option><option>snacks</option>
+          <option>beverages</option><option>frozen</option><option>pantry</option>
+          <option>bakery</option><option>canned goods</option><option>deli</option>
+          <option>dry goods pasta</option><option>meat seafood</option><option>breakfast</option>
+          <option>personal care</option><option>household</option><option>babies</option>
+          <option>international</option><option>alcohol</option><option>pets</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Product</label>
+        <select id="prodSelect">
+          <option value="">— Select Category First —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="qty" value="1" min="1" max="100"/>
+      </div>
+      <button class="btn-submit" onclick="addToCart()" style="background:var(--accent2)">+ Add to Cart</button>
+    </div>
+
+    <div class="cart-card">
+      <h3>🛒 Your Cart <span id="cartCount" style="color:var(--ink3);font-weight:400;font-size:.85rem">(0 items)</span></h3>
+      <div id="cartBody"><div class="cart-empty">Your cart is empty</div></div>
+      <div id="cartTotalRow" style="display:none" class="cart-total"><span>Total</span><span id="cartTotal">PKR 0</span></div>
+      <div id="nameConfirm" style="display:none;margin-top:.75rem;font-size:.82rem;color:var(--ink2)">Ordering as: <strong id="nameDisplay"></strong></div>
+      <button class="btn-cart-order" id="placeBtn" onclick="placeOrder()" disabled>Place Order →</button>
+      <div class="success-msg" id="successMsg">✅ Order placed successfully! Charts updated.</div>
+      <div class="error-msg" id="errorMsg">❌ Error placing order. Please try again.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE: LIVE DASHBOARD ══════════════ -->
+<div id="page-dashboard" class="page">
+  <div class="page-header">
+    <h1>Live Dashboard</h1>
+    <p>Auto-refreshes every 15 seconds · Showing real orders from Supabase</p>
+  </div>
+  <div class="refresh-bar">
+    <div class="spinner" id="dashSpinner"></div>
+    <span id="lastRefresh">Never refreshed</span>
+    <button class="btn-refresh" onclick="loadDashboard()">↻ Refresh Now</button>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi accent"><div class="kpi-label">Live Orders</div><div class="kpi-val" id="liveOrders">—</div><div class="kpi-sub">From Supabase DB</div></div>
+    <div class="kpi green"><div class="kpi-label">Items Sold</div><div class="kpi-val" id="liveItems">—</div><div class="kpi-sub">Total quantity</div></div>
+    <div class="kpi blue"><div class="kpi-label">Revenue</div><div class="kpi-val" id="liveRevenue">—</div><div class="kpi-sub">PKR total</div></div>
+    <div class="kpi gold"><div class="kpi-label">Customers</div><div class="kpi-val" id="liveCusts">—</div><div class="kpi-sub">Unique names</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Orders by Category</div><canvas id="liveCatChart"></canvas></div>
+    <div class="card"><div class="card-title">Orders Over Time</div><canvas id="liveTimeChart"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Top Products (Live)</div><canvas id="liveTopChart"></canvas></div>
+    <div class="card"><div class="card-title">Revenue by Category</div><canvas id="liveRevChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recent Orders (Live Feed)</div>
+    <div id="recentOrdersWrap">
+      <div class="empty"><div class="empty-icon">📭</div><p>No orders yet — place the first one!</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE: MY ORDERS ══════════════ -->
+<div id="page-myorders" class="page">
+  <div class="page-header">
+    <h1>My Orders</h1>
+    <p>Enter your name to see your order history</p>
+  </div>
+  <div class="order-lookup">
+    <input type="text" id="lookupName" placeholder="Enter your name (e.g. Ahmed Khan)"/>
+    <button class="btn-look" onclick="lookupOrders()">🔍 Find My Orders</button>
+  </div>
+  <div id="myOrdersWrap">
+    <div class="empty"><div class="empty-icon">🔍</div><p>Enter your name above to see your orders</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE: ADMIN ══════════════ -->
+<div id="page-admin" class="page">
+  <div class="page-header">
+    <h1>Admin Panel</h1>
+    <p>Password-protected overview of all orders and analytics</p>
+  </div>
+  <div class="admin-lock" id="adminLock">
+    <h2>🔐 Admin Access</h2>
+    <p>Enter the admin password to view all orders</p>
+    <div class="admin-pin-wrap">
+      <input type="password" id="adminPin" placeholder="Enter password" onkeydown="if(event.key==='Enter')unlockAdmin()"/>
+      <button class="btn-unlock" onclick="unlockAdmin()">Unlock</button>
+    </div>
+    <div style="margin-top:.75rem;font-size:.8rem;color:var(--ink3)">Default password: <code>admin123</code></div>
+  </div>
+  <div class="admin-panel" id="adminPanel">
+    <div class="refresh-bar">
+      <div class="spinner" id="adminSpinner"></div>
+      <span id="adminRefresh">—</span>
+      <button class="btn-refresh" onclick="loadAdmin()">↻ Refresh</button>
+      <button class="btn-refresh" onclick="lockAdmin()" style="color:var(--accent)">🔒 Lock</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi accent"><div class="kpi-label">Total Orders</div><div class="kpi-val" id="adOrders">—</div></div>
+      <div class="kpi green"><div class="kpi-label">Total Items</div><div class="kpi-val" id="adItems">—</div></div>
+      <div class="kpi blue"><div class="kpi-label">Revenue (PKR)</div><div class="kpi-val" id="adRevenue">—</div></div>
+      <div class="kpi gold"><div class="kpi-label">Customers</div><div class="kpi-val" id="adCusts">—</div></div>
+    </div>
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-title">All Orders</div>
+      <div id="adminTableWrap">
+        <div class="empty"><div class="empty-icon">📭</div><p>No orders yet</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════ SUPABASE CONFIG ══════════════
+const SUPABASE_URL = "https://dpitgsqymozwppjjczcr.supabase.co";
+const SUPABASE_KEY = "sb_publishable_b79-K3s2HtylDkApOylyeg_dpGX23cl";
+
+async function sbFetch(path, options={}) {
+  const res = await fetch(SUPABASE_URL + path, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || '',
+      ...options.headers
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// ══════════════ PRODUCT DATA ══════════════
+const PRODUCTS = {
+  "produce":["Banana","Organic Strawberries","Organic Baby Spinach","Large Lemon","Organic Avocado","Organic Hass Avocado","Strawberries","Limes","Organic Raspberries","Organic Blueberries"],
+  "dairy eggs":["Organic Whole Milk","Organic Reduced Fat Milk","Organic Large Grade AA Eggs","0% Fat Free Milk","Salted Butter","Greek Yogurt","Cheddar Cheese","Cream Cheese","Heavy Whipping Cream","Almond Milk"],
+  "snacks":["Tortilla Chips","Organic Popcorn","Almonds","Granola Bar","Pretzels","Rice Cakes","Dark Chocolate","Peanut Butter Crackers","Cheese Puffs","Trail Mix"],
+  "beverages":["Sparkling Water","Orange Juice","Green Tea","Coconut Water","Cold Brew Coffee","Apple Juice","Lemonade","Kombucha","Sports Drink","Iced Tea"],
+  "frozen":["Frozen Mango Chunks","Edamame","Frozen Peas","Ice Cream Vanilla","Frozen Waffles","Chicken Nuggets","Frozen Pizza","Mixed Vegetables","Fish Fillets","Frozen Burritos"],
+  "pantry":["Extra Virgin Olive Oil","Honey","Brown Rice","Pasta","Tomato Sauce","Peanut Butter","Quinoa","Coconut Oil","Soy Sauce","White Vinegar"],
+  "bakery":["Sourdough Bread","Croissant","Bagels","Banana Bread","Whole Wheat Bread","Blueberry Muffin","Baguette","Cinnamon Roll","Dinner Rolls","Rye Bread"],
+  "canned goods":["Canned Tomatoes","Black Beans","Chickpeas","Canned Tuna","Corn","Coconut Milk","Lentils","Kidney Beans","Canned Soup","Artichoke Hearts"],
+  "deli":["Original Hummus","Guacamole","Smoked Salmon","Turkey Slices","Ham","Roasted Chicken","Feta Cheese","Prosciutto","Caprese Salad","Smoked Turkey"],
+  "dry goods pasta":["Spaghetti","Penne","Brown Rice Pasta","Lentil Pasta","Couscous","Orzo","Fettuccine","Rigatoni","Farfalle","Lasagna Sheets"],
+  "meat seafood":["Chicken Breast","Ground Beef","Atlantic Salmon","Shrimp","Tilapia","Pork Chops","Lamb Chops","Turkey Breast","Tuna Steak","Crab Cakes"],
+  "breakfast":["Oats","Granola","Pancake Mix","Maple Syrup","Chia Seeds","Flaxseeds","Breakfast Cereal","Almond Flour","Protein Powder","Quinoa Flakes"],
+  "personal care":["Shampoo","Conditioner","Face Wash","Body Lotion","Toothpaste","Deodorant","Sunscreen","Hand Soap","Face Moisturizer","Lip Balm"],
+  "household":["Dish Soap","Laundry Detergent","Paper Towels","Toilet Paper","Trash Bags","Sponges","Baking Soda","White Vinegar","Rubber Gloves","Dryer Sheets"],
+  "babies":["Baby Formula","Diapers","Baby Wipes","Baby Shampoo","Baby Food Puree","Teething Rings","Baby Lotion","Baby Cereal","Nursing Pads","Baby Powder"],
+  "international":["Miso Paste","Thai Fish Sauce","Harissa Paste","Tahini","Curry Paste","Sriracha","Mango Chutney","Kimchi","Nori Sheets","Tamarind Paste"],
+  "alcohol":["Red Wine","White Wine","Craft Beer","Whiskey","Vodka","Gin","Tequila","Rum","Champagne","Hard Cider"],
+  "pets":["Dog Food","Cat Food","Dog Treats","Cat Treats","Pet Shampoo","Cat Litter","Bird Seed","Fish Food","Pet Vitamins","Chew Toys"]
+};
+
+const PRICES = {};
+Object.keys(PRODUCTS).forEach(cat => {
+  PRODUCTS[cat].forEach(p => {
+    PRICES[p] = Math.round((Math.random()*800 + 100) / 10) * 10;
+  });
+});
+
+// ══════════════ CART STATE ══════════════
+let cart = [];
+let customerName = '';
+
+function filterProducts() {
+  const cat = document.getElementById('catSelect').value;
+  const sel = document.getElementById('prodSelect');
+  sel.innerHTML = '';
+  if (!cat) { sel.innerHTML = '<option>— Select Category First —</option>'; return; }
+  const items = PRODUCTS[cat] || [];
+  items.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p + ' — PKR ' + (PRICES[p] || 200);
+    sel.appendChild(opt);
+  });
+}
+
+function addToCart() {
+  const name = document.getElementById('custName').value.trim();
+  const cat = document.getElementById('catSelect').value;
+  const prod = document.getElementById('prodSelect').value;
+  const qty = parseInt(document.getElementById('qty').value) || 1;
+  if (!name) { alert('Please enter your name!'); return; }
+  if (!cat || !prod) { alert('Please select a category and product!'); return; }
+  if (!customerName) customerName = name;
+  const price = PRICES[prod] || 200;
+  const existing = cart.find(x => x.product_name === prod);
+  if (existing) { existing.quantity += qty; existing.total = existing.quantity * price; }
+  else { cart.push({ product_name: prod, category: cat, quantity: qty, price, total: qty * price }); }
+  renderCart();
+}
+
+function renderCart() {
+  const body = document.getElementById('cartBody');
+  const totalRow = document.getElementById('cartTotalRow');
+  const nameConf = document.getElementById('nameConfirm');
+  const placeBtn = document.getElementById('placeBtn');
+  if (cart.length === 0) {
+    body.innerHTML = '<div class="cart-empty">Your cart is empty</div>';
+    totalRow.style.display = 'none';
+    nameConf.style.display = 'none';
+    placeBtn.disabled = true;
+    document.getElementById('cartCount').textContent = '(0 items)';
+    return;
+  }
+  body.innerHTML = cart.map((item, i) => `
+    <div class="cart-item">
+      <div>
+        <div class="ci-name">${item.product_name}</div>
+        <div class="ci-qty">${item.quantity} × PKR ${item.price}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="ci-price">PKR ${item.total}</span>
+        <span class="ci-del" onclick="removeFromCart(${i})">✕</span>
+      </div>
+    </div>
+  `).join('');
+  const total = cart.reduce((s, x) => s + x.total, 0);
+  document.getElementById('cartTotal').textContent = 'PKR ' + total.toLocaleString();
+  totalRow.style.display = 'flex';
+  document.getElementById('nameDisplay').textContent = customerName || document.getElementById('custName').value;
+  nameConf.style.display = 'block';
+  placeBtn.disabled = false;
+  document.getElementById('cartCount').textContent = `(${cart.length} item${cart.length > 1 ? 's' : ''})`;
+}
+
+function removeFromCart(i) {
+  cart.splice(i, 1);
+  renderCart();
+}
+
+async function placeOrder() {
+  const name = customerName || document.getElementById('custName').value.trim();
+  if (!name || cart.length === 0) return;
+  const btn = document.getElementById('placeBtn');
+  const success = document.getElementById('successMsg');
+  const error = document.getElementById('errorMsg');
+  btn.disabled = true;
+  btn.textContent = 'Placing Order…';
+  success.style.display = 'none';
+  error.style.display = 'none';
+  try {
+    const rows = cart.map(item => ({
+      customer_name: name,
+      product_name: item.product_name,
+      category: item.category,
+      quantity: item.quantity,
+      price: item.total
+    }));
+    await sbFetch('/rest/v1/orders', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(rows)
+    });
+    success.style.display = 'block';
+    success.textContent = `✅ Order placed for ${name}! ${cart.length} item(s) added. Charts will update live.`;
+    cart = [];
+    customerName = '';
+    renderCart();
+    document.getElementById('custName').value = '';
+  } catch (e) {
+    error.style.display = 'block';
+    error.textContent = '❌ Error: ' + e.message;
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Place Order →';
+}
+
+// ══════════════ DASHBOARD CHARTS ══════════════
+let dashCharts = {};
+const COLORS = ['#ff4f1f','#2d7dd2','#06a77d','#f4a400','#9b5de5','#f15bb5','#00bbf9','#00f5d4','#fee440','#fb5607'];
+
+function destroyChart(id) {
+  if (dashCharts[id]) { dashCharts[id].destroy(); delete dashCharts[id]; }
+}
+
+async function loadDashboard() {
+  const spinner = document.getElementById('dashSpinner');
+  spinner.style.display = 'inline-block';
+  try {
+    const orders = await sbFetch('/rest/v1/orders?select=*&order=created_at.desc');
+    document.getElementById('lastRefresh').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString();
+    if (!orders || orders.length === 0) {
+      spinner.style.display = 'none';
+      document.getElementById('liveOrders').textContent = '0';
+      document.getElementById('liveItems').textContent = '0';
+      document.getElementById('liveRevenue').textContent = '0';
+      document.getElementById('liveCusts').textContent = '0';
+      document.getElementById('recentOrdersWrap').innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>No orders yet — place the first one!</p></div>';
+      return;
+    }
+    // KPIs
+    const totalItems = orders.reduce((s,x)=>s+x.quantity,0);
+    const totalRev = orders.reduce((s,x)=>s+x.price,0);
+    const uniqueCusts = new Set(orders.map(x=>x.customer_name)).size;
+    document.getElementById('liveOrders').textContent = orders.length;
+    document.getElementById('liveItems').textContent = totalItems;
+    document.getElementById('liveRevenue').textContent = Math.round(totalRev/1000)+'k';
+    document.getElementById('liveCusts').textContent = uniqueCusts;
+
+    // Category chart
+    const byCat = {};
+    orders.forEach(o => { byCat[o.category] = (byCat[o.category]||0) + o.quantity; });
+    const catLabels = Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]);
+    destroyChart('liveCat');
+    dashCharts['liveCat'] = new Chart(document.getElementById('liveCatChart'),{
+      type:'bar',
+      data:{labels:catLabels,datasets:[{data:catLabels.map(c=>byCat[c]),backgroundColor:catLabels.map((_,i)=>COLORS[i%COLORS.length]+'cc'),borderRadius:5}]},
+      options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:40,font:{size:9}}},y:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}
+    });
+
+    // Time chart
+    const byDate = {};
+    orders.forEach(o => { const d = o.created_at.slice(0,10); byDate[d]=(byDate[d]||0)+1; });
+    const dates = Object.keys(byDate).sort();
+    destroyChart('liveTime');
+    dashCharts['liveTime'] = new Chart(document.getElementById('liveTimeChart'),{
+      type:'line',
+      data:{labels:dates.map(d=>d.slice(5)),datasets:[{data:dates.map(d=>byDate[d]),borderColor:'#ff4f1f',backgroundColor:'rgba(255,79,31,.07)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#ff4f1f'}]},
+      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},responsive:true,maintainAspectRatio:true}
+    });
+
+    // Top products
+    const byProd = {};
+    orders.forEach(o => { byProd[o.product_name]=(byProd[o.product_name]||0)+o.quantity; });
+    const topProds = Object.keys(byProd).sort((a,b)=>byProd[b]-byProd[a]).slice(0,8);
+    destroyChart('liveTop');
+    dashCharts['liveTop'] = new Chart(document.getElementById('liveTopChart'),{
+      type:'bar',
+      data:{labels:topProds.map(p=>p.length>16?p.slice(0,16)+'…':p),datasets:[{data:topProds.map(p=>byProd[p]),backgroundColor:'rgba(45,125,210,.75)',borderRadius:5}]},
+      options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}
+    });
+
+    // Revenue by category
+    const revByCat = {};
+    orders.forEach(o => { revByCat[o.category]=(revByCat[o.category]||0)+o.price; });
+    const revCats = Object.keys(revByCat).sort((a,b)=>revByCat[b]-revByCat[a]);
+    destroyChart('liveRev');
+    dashCharts['liveRev'] = new Chart(document.getElementById('liveRevChart'),{
+      type:'doughnut',
+      data:{labels:revCats,datasets:[{data:revCats.map(c=>Math.round(revByCat[c])),backgroundColor:revCats.map((_,i)=>COLORS[i%COLORS.length]+'cc'),borderWidth:2,borderColor:'#fff'}]},
+      options:{plugins:{legend:{position:'right',labels:{font:{size:10},color:'#5a5a50',boxWidth:12}}},responsive:true,maintainAspectRatio:true}
+    });
+
+    // Recent orders
+    const recent = orders.slice(0,15);
+    document.getElementById('recentOrdersWrap').innerHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Product</th><th>Category</th><th>Qty</th><th>Price (PKR)</th><th>Time</th></tr></thead>
+        <tbody>${recent.map((o,i)=>`
+          <tr>
+            <td style="color:var(--ink3)">${i+1}</td>
+            <td><strong>${o.customer_name}</strong></td>
+            <td>${o.product_name}</td>
+            <td><span class="pill pill-blue">${o.category}</span></td>
+            <td>${o.quantity}</td>
+            <td style="font-weight:600;color:var(--accent3)">${Math.round(o.price).toLocaleString()}</td>
+            <td style="color:var(--ink3);font-size:.78rem">${new Date(o.created_at).toLocaleString('en-PK',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    document.getElementById('lastRefresh').textContent = 'Error loading — ' + e.message;
+    console.error(e);
+  }
+  spinner.style.display = 'none';
+}
+
+// ══════════════ MY ORDERS ══════════════
+async function lookupOrders() {
+  const name = document.getElementById('lookupName').value.trim();
+  if (!name) { alert('Please enter your name!'); return; }
+  const wrap = document.getElementById('myOrdersWrap');
+  wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><p>Looking up orders…</p></div>';
+  try {
+    const orders = await sbFetch(`/rest/v1/orders?customer_name=ilike.${encodeURIComponent('*'+name+'*')}&order=created_at.desc&select=*`);
+    if (!orders || orders.length === 0) {
+      wrap.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><p>No orders found for "<strong>${name}</strong>". Check the spelling.</p></div>`;
+      return;
+    }
+    const totalSpent = orders.reduce((s,x)=>s+x.price,0);
+    const totalItems = orders.reduce((s,x)=>s+x.quantity,0);
+    wrap.innerHTML = `
+      <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
+        <div class="kpi accent"><div class="kpi-label">Your Orders</div><div class="kpi-val">${orders.length}</div></div>
+        <div class="kpi green"><div class="kpi-label">Items Bought</div><div class="kpi-val">${totalItems}</div></div>
+        <div class="kpi blue"><div class="kpi-label">Total Spent</div><div class="kpi-val">PKR ${Math.round(totalSpent).toLocaleString()}</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Order History for ${name}</div>
+        <table>
+          <thead><tr><th>#</th><th>Product</th><th>Category</th><th>Qty</th><th>Price (PKR)</th><th>Date</th></tr></thead>
+          <tbody>${orders.map((o,i)=>`
+            <tr>
+              <td style="color:var(--ink3)">${i+1}</td>
+              <td><strong>${o.product_name}</strong></td>
+              <td><span class="pill pill-blue">${o.category}</span></td>
+              <td>${o.quantity}</td>
+              <td style="color:var(--accent3);font-weight:600">${Math.round(o.price).toLocaleString()}</td>
+              <td style="color:var(--ink3);font-size:.78rem">${new Date(o.created_at).toLocaleString('en-PK',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">❌</div><p>Error: ${e.message}</p></div>`;
+  }
+}
+
+// ══════════════ ADMIN ══════════════
+const ADMIN_PASS = 'admin123';
+function unlockAdmin() {
+  const pin = document.getElementById('adminPin').value;
+  if (pin === ADMIN_PASS) {
+    document.getElementById('adminLock').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    loadAdmin();
+  } else { alert('Wrong password! Try: admin123'); }
+}
+function lockAdmin() {
+  document.getElementById('adminLock').style.display = 'block';
+  document.getElementById('adminPanel').style.display = 'none';
+  document.getElementById('adminPin').value = '';
+}
+
+async function loadAdmin() {
+  const spinner = document.getElementById('adminSpinner');
+  spinner.style.display = 'inline-block';
+  try {
+    const orders = await sbFetch('/rest/v1/orders?select=*&order=created_at.desc');
+    document.getElementById('adminRefresh').textContent = 'Refreshed: ' + new Date().toLocaleTimeString();
+    if (!orders || orders.length === 0) {
+      ['adOrders','adItems','adRevenue','adCusts'].forEach(id=>document.getElementById(id).textContent='0');
+      document.getElementById('adminTableWrap').innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>No orders yet</p></div>';
+      spinner.style.display = 'none'; return;
+    }
+    document.getElementById('adOrders').textContent = orders.length;
+    document.getElementById('adItems').textContent = orders.reduce((s,x)=>s+x.quantity,0);
+    document.getElementById('adRevenue').textContent = 'PKR '+(Math.round(orders.reduce((s,x)=>s+x.price,0))).toLocaleString();
+    document.getElementById('adCusts').textContent = new Set(orders.map(x=>x.customer_name)).size;
+    document.getElementById('adminTableWrap').innerHTML = `
+      <table>
+        <thead><tr><th>ID</th><th>Customer</th><th>Product</th><th>Category</th><th>Qty</th><th>Price (PKR)</th><th>Date & Time</th></tr></thead>
+        <tbody>${orders.map(o=>`
+          <tr>
+            <td style="font-size:.72rem;color:var(--ink3);font-family:monospace">${o.id.slice(0,8)}…</td>
+            <td><strong>${o.customer_name}</strong></td>
+            <td>${o.product_name}</td>
+            <td><span class="pill pill-blue">${o.category}</span></td>
+            <td>${o.quantity}</td>
+            <td style="color:var(--accent3);font-weight:600">${Math.round(o.price).toLocaleString()}</td>
+            <td style="color:var(--ink3);font-size:.78rem">${new Date(o.created_at).toLocaleString()}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    document.getElementById('adminRefresh').textContent = 'Error: ' + e.message;
+    console.error(e);
+  }
+  spinner.style.display = 'none';
+}
+
+// ══════════════ NAVIGATION ══════════════
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'dashboard') loadDashboard();
+}
+
+// ══════════════ AUTO REFRESH ══════════════
+let autoRefreshInterval;
+function startAutoRefresh() {
+  autoRefreshInterval = setInterval(() => {
+    const dashActive = document.getElementById('page-dashboard').classList.contains('active');
+    if (dashActive) loadDashboard();
+  }, 15000);
+}
+
+startAutoRefresh();
+</script>
+</body>
+</html>
