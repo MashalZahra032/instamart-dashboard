@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/instamart_dashboard.html" }
+    { "source": "/(.*)", "destination": "/instamart_dynamic.html" }
   ]
 }
