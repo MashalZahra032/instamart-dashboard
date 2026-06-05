@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Instamart — Live Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#e0dbd0;
+  --ink:#1a1a18;--ink2:#5a5a50;--ink3:#9a9a8a;
+  --accent:#ff4f1f;--accent2:#2d7dd2;--accent3:#06a77d;--accent4:#f4a400;
+  --shadow:0 2px 16px rgba(0,0,0,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+header{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;gap:1.5rem;height:56px;position:sticky;top:0;z-index:200;flex-wrap:wrap}
+.logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:#fff}
+.logo em{color:var(--accent);font-style:normal}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#06a77d;box-shadow:0 0 0 0 rgba(6,167,125,.4);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(6,167,125,.4)}70%{box-shadow:0 0 0 7px rgba(6,167,125,0)}100%{box-shadow:0 0 0 0 rgba(6,167,125,0)}}
+.live-label{font-size:.7rem;color:#aaa;display:flex;align-items:center;gap:.3rem}
+.spacer{flex:1}
+.nav-btns{display:flex;gap:.2rem;flex-wrap:wrap}
+.nav-btn{padding:.38rem .85rem;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:500;color:#aaa;background:transparent;border:1px solid transparent;transition:all .2s;font-family:'Inter',sans-serif;white-space:nowrap}
+.nav-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-btn.active{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.15)}
+.page{display:none;padding:1.75rem;max-width:1320px;margin:0 auto;animation:fadeIn .3s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page-header{margin-bottom:1.75rem}
+.page-header h1{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;line-height:1.1}
+.page-header p{color:var(--ink2);margin-top:.35rem;font-size:.88rem}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem 1.4rem;box-shadow:var(--shadow)}
+.kpi-label{font-size:.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.45rem}
+.kpi-val{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;line-height:1}
+.kpi-sub{font-size:.72rem;color:var(--ink3);margin-top:.28rem}
+.kpi.c-red .kpi-val{color:var(--accent)}.kpi.c-green .kpi-val{color:var(--accent3)}.kpi.c-blue .kpi-val{color:var(--accent2)}.kpi.c-gold .kpi-val{color:var(--accent4)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;box-shadow:var(--shadow)}
+.card-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+.card canvas{max-height:230px}
+/* Forms */
+.order-wrap{display:grid;grid-template-columns:1.3fr 1fr;gap:1.5rem;align-items:start}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.75rem;box-shadow:var(--shadow)}
+.form-card h2{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;margin-bottom:.3rem}
+.form-card p{color:var(--ink2);font-size:.86rem;margin-bottom:1.5rem}
+.field{margin-bottom:1.1rem}
+label{display:block;font-size:.76rem;font-weight:700;color:var(--ink2);margin-bottom:.38rem;text-transform:uppercase;letter-spacing:.05em}
+input,select,textarea{width:100%;padding:.7rem .95rem;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);transition:border .2s,box-shadow .2s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(45,125,210,.1)}
+.btn{padding:.75rem 1.5rem;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#e03d0e;transform:translateY(-1px);box-shadow:0 4px 14px rgba(255,79,31,.3)}
+.btn-blue{background:var(--accent2);color:#fff;width:100%}.btn-blue:hover{background:#1d6dbf;transform:translateY(-1px)}
+.btn-green{background:var(--accent3);color:#fff}.btn-green:hover{background:#059669;transform:translateY(-1px)}
+.btn-dark{background:var(--ink);color:#fff;width:100%}.btn-dark:hover{background:#333;transform:translateY(-1px)}
+.btn:disabled{background:#ccc!important;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.msg{display:none;border-radius:10px;padding:.9rem;font-size:.86rem;margin-top:.9rem;font-weight:500}
+.msg-ok{background:rgba(6,167,125,.08);border:1px solid rgba(6,167,125,.25);color:var(--accent3)}
+.msg-err{background:rgba(255,79,31,.08);border:1px solid rgba(255,79,31,.2);color:var(--accent)}
+/* Cart */
+.cart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.4rem;box-shadow:var(--shadow);position:sticky;top:68px}
+.cart-card h3{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:.9rem}
+.cart-empty{color:var(--ink3);font-size:.83rem;text-align:center;padding:1.25rem 0}
+.cart-item{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.83rem}
+.cart-item:last-child{border-bottom:none}
+.ci-name{font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-qty{color:var(--ink3);font-size:.76rem}
+.ci-price{font-weight:700;color:var(--accent3)}
+.ci-del{cursor:pointer;color:var(--ink3);font-size:.72rem;padding:.15rem .35rem;border-radius:4px;transition:all .2s}
+.ci-del:hover{color:var(--accent);background:rgba(255,79,31,.08)}
+.cart-total{display:flex;justify-content:space-between;padding-top:.7rem;margin-top:.2rem;border-top:2px solid var(--ink);font-weight:700;font-family:'Syne',sans-serif;font-size:.95rem}
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:.81rem}
+thead tr{border-bottom:2px solid var(--border)}
+th{text-align:left;padding:.6rem .7rem;font-size:.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em}
+td{padding:.55rem .7rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,0,0,.015)}
+.pill{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.7rem;font-weight:700}
+.pill-green{background:rgba(6,167,125,.1);color:var(--accent3);border:1px solid rgba(6,167,125,.2)}
+.pill-gold{background:rgba(244,164,0,.1);color:var(--accent4);border:1px solid rgba(244,164,0,.2)}
+.pill-red{background:rgba(255,79,31,.1);color:var(--accent);border:1px solid rgba(255,79,31,.2)}
+.pill-blue{background:rgba(45,125,210,.1);color:var(--accent2);border:1px solid rgba(45,125,210,.2)}
+.pill-gray{background:rgba(0,0,0,.06);color:var(--ink2);border:1px solid var(--border)}
+/* Stock bar */
+.stock-bar-wrap{width:100px;height:8px;background:var(--border);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle}
+.stock-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+/* Alert banner */
+.alert-banner{background:rgba(255,79,31,.07);border:1.5px solid rgba(255,79,31,.25);border-radius:12px;padding:.9rem 1.1rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:.75rem}
+.alert-icon{font-size:1.2rem;margin-top:.05rem}
+.alert-body{flex:1}
+.alert-body strong{font-size:.85rem;color:var(--accent)}
+.alert-body p{font-size:.78rem;color:var(--ink2);margin-top:.2rem}
+/* Optimization cards */
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem}
+.opt-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;box-shadow:var(--shadow);border-top:3px solid transparent}
+.opt-card.urgent{border-top-color:var(--accent)}
+.opt-card.warn{border-top-color:var(--accent4)}
+.opt-card.ok{border-top-color:var(--accent3)}
+.opt-card h4{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;margin-bottom:.4rem}
+.opt-card p{font-size:.76rem;color:var(--ink2);line-height:1.5;margin-bottom:.6rem}
+.opt-tag{display:inline-block;font-size:.68rem;font-weight:700;padding:.18rem .5rem;border-radius:4px;margin-bottom:.5rem}
+.tag-front{background:rgba(45,125,210,.1);color:var(--accent2)}
+.tag-discount{background:rgba(244,164,0,.1);color:var(--accent4)}
+.tag-reorder{background:rgba(255,79,31,.1);color:var(--accent)}
+.tag-ok{background:rgba(6,167,125,.1);color:var(--accent3)}
+/* Refresh bar */
+.refresh-bar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.1rem;font-size:.78rem;color:var(--ink3)}
+.spinner{display:none;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-sm{padding:.33rem .85rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.76rem;font-family:'Inter',sans-serif;color:var(--ink2);transition:all .2s}
+.btn-sm:hover{background:var(--surface2)}
+/* Admin */
+.admin-lock{text-align:center;padding:3rem 1rem}
+.admin-lock h2{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;margin-bottom:.5rem}
+.admin-lock p{color:var(--ink2);margin-bottom:1.5rem}
+.pin-wrap{display:flex;gap:.75rem;justify-content:center;max-width:300px;margin:0 auto}
+.pin-wrap input{flex:1}
+.admin-panel{display:none}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--ink3)}
+.empty-icon{font-size:2rem;margin-bottom:.4rem}
+.empty p{font-size:.85rem}
+.tabs-row{display:flex;gap:.4rem;margin-bottom:1.1rem;flex-wrap:wrap}
+.tab-btn{padding:.35rem .9rem;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;border:1.5px solid var(--border);color:var(--ink2);background:transparent;transition:all .2s;font-family:'Inter',sans-serif}
+.tab-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(45,125,210,.07)}
+@media(max-width:900px){.kpi-row,.grid2,.grid3,.opt-grid{grid-template-columns:1fr 1fr}.order-wrap{grid-template-columns:1fr}}
+@media(max-width:600px){.kpi-row,.opt-grid{grid-template-columns:1fr 1fr}.page{padding:1rem}header{padding:0 1rem}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">INSTA<em>MART</em></div>
+  <div class="live-label"><div class="live-dot"></div>Live</div>
+  <div class="spacer"></div>
+  <div class="nav-btns">
+    <button class="nav-btn active" onclick="nav('order',this)">🛒 Order</button>
+    <button class="nav-btn" onclick="nav('dashboard',this)">📊 Dashboard</button>
+    <button class="nav-btn" onclick="nav('inventory',this)">📦 Inventory</button>
+    <button class="nav-btn" onclick="nav('optimize',this)">🧠 Optimize</button>
+    <button class="nav-btn" onclick="nav('myorders',this)">📋 My Orders</button>
+    <button class="nav-btn" onclick="nav('admin',this)">🔐 Admin</button>
+  </div>
+</header>
+
+<!-- ══ ORDER PAGE ══ -->
+<div id="page-order" class="page active">
+  <div class="page-header"><h1>Place an Order</h1><p>Pick products, add to cart, submit — inventory updates automatically</p></div>
+  <div class="order-wrap">
+    <div class="form-card">
+      <h2>Add to Cart</h2><p>Select category → product → quantity</p>
+      <div class="field"><label>Your Name</label><input id="custName" type="text" placeholder="e.g. Ahmed Khan"/></div>
+      <div class="field"><label>Category</label>
+        <select id="catSelect" onchange="filterProducts()">
+          <option value="">— Select Category —</option>
+          <option>produce</option><option>dairy eggs</option><option>snacks</option>
+          <option>beverages</option><option>frozen</option><option>pantry</option>
+          <option>bakery</option><option>canned goods</option><option>deli</option>
+          <option>dry goods pasta</option><option>meat seafood</option><option>breakfast</option>
+          <option>personal care</option><option>household</option><option>international</option>
+        </select>
+      </div>
+      <div class="field"><label>Product</label><select id="prodSelect"><option>— Select Category First —</option></select></div>
+      <div class="field"><label>Quantity</label><input id="qty" type="number" value="1" min="1" max="100"/></div>
+      <button class="btn btn-blue" onclick="addToCart()">+ Add to Cart</button>
+    </div>
+    <div class="cart-card">
+      <h3>🛒 Cart <span id="cartCount" style="color:var(--ink3);font-weight:400;font-size:.82rem">(0)</span></h3>
+      <div id="cartBody"><div class="cart-empty">Cart is empty</div></div>
+      <div id="cartTotalRow" style="display:none" class="cart-total"><span>Total</span><span id="cartTotal">PKR 0</span></div>
+      <div id="nameConf" style="display:none;font-size:.8rem;color:var(--ink2);margin-top:.6rem">Ordering as: <strong id="nameDisp"></strong></div>
+      <button class="btn btn-dark" id="placeBtn" onclick="placeOrder()" disabled style="margin-top:.75rem">Place Order →</button>
+      <div class="msg msg-ok" id="orderOk"></div>
+      <div class="msg msg-err" id="orderErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD PAGE ══ -->
+<div id="page-dashboard" class="page">
+  <div class="page-header"><h1>Live Dashboard</h1><p>Auto-refreshes every 15s · Real data from Supabase</p></div>
+  <div class="refresh-bar"><div class="spinner" id="dashSpin"></div><span id="dashTime">—</span><button class="btn-sm" onclick="loadDashboard()">↻ Refresh</button></div>
+  <div class="kpi-row">
+    <div class="kpi c-red"><div class="kpi-label">Live Orders</div><div class="kpi-val" id="dOrders">—</div><div class="kpi-sub">From database</div></div>
+    <div class="kpi c-green"><div class="kpi-label">Items Sold</div><div class="kpi-val" id="dItems">—</div><div class="kpi-sub">Total quantity</div></div>
+    <div class="kpi c-blue"><div class="kpi-label">Revenue</div><div class="kpi-val" id="dRevenue">—</div><div class="kpi-sub">PKR total</div></div>
+    <div class="kpi c-gold"><div class="kpi-label">Customers</div><div class="kpi-val" id="dCusts">—</div><div class="kpi-sub">Unique</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Orders by Category</div><canvas id="dCatChart"></canvas></div>
+    <div class="card"><div class="card-title">Orders Over Time</div><canvas id="dTimeChart"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Top Products (Live)</div><canvas id="dTopChart"></canvas></div>
+    <div class="card"><div class="card-title">Revenue by Category</div><canvas id="dRevChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recent Orders</div>
+    <div id="recentWrap"><div class="empty"><div class="empty-icon">📭</div><p>No orders yet</p></div></div>
+  </div>
+</div>
+
+<!-- ══ INVENTORY PAGE ══ -->
+<div id="page-inventory" class="page">
+  <div class="page-header"><h1>Inventory Management</h1><p>Track stock in · stock out · current levels · low stock alerts</p></div>
+
+  <div id="alertsWrap"></div>
+
+  <div class="refresh-bar"><div class="spinner" id="invSpin"></div><span id="invTime">—</span><button class="btn-sm" onclick="loadInventory()">↻ Refresh</button></div>
+
+  <div class="kpi-row">
+    <div class="kpi c-blue"><div class="kpi-label">Total Products</div><div class="kpi-val" id="iTotal">—</div><div class="kpi-sub">In inventory</div></div>
+    <div class="kpi c-green"><div class="kpi-label">Well Stocked</div><div class="kpi-val" id="iGood">—</div><div class="kpi-sub">Above reorder level</div></div>
+    <div class="kpi c-gold"><div class="kpi-label">Low Stock</div><div class="kpi-val" id="iLow">—</div><div class="kpi-sub">Near reorder level</div></div>
+    <div class="kpi c-red"><div class="kpi-label">Critical</div><div class="kpi-val" id="iCrit">—</div><div class="kpi-sub">Below reorder level</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:1.25rem">
+    <div class="card"><div class="card-title">Stock Levels by Product</div><canvas id="iLevelChart"></canvas></div>
+    <div class="card"><div class="card-title">Stock Movements (In vs Out)</div><canvas id="iMovChart"></canvas></div>
+  </div>
+
+  <!-- Restock form -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">📥 Add Incoming Stock (Restock)</div>
+      <div class="field"><label>Product</label>
+        <select id="restockProd"><option>— Select Product —</option></select>
+      </div>
+      <div class="field"><label>Quantity Coming In</label><input id="restockQty" type="number" value="50" min="1"/></div>
+      <div class="field"><label>Supplier / Note</label><input id="restockNote" type="text" placeholder="e.g. Daily supply from farm"/></div>
+      <button class="btn btn-green" onclick="addRestock()" style="width:100%">📥 Record Restock</button>
+      <div class="msg msg-ok" id="restockOk"></div>
+      <div class="msg msg-err" id="restockErr"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📤 Manual Stock Deduction</div>
+      <div class="field"><label>Product</label>
+        <select id="deductProd"><option>— Select Product —</option></select>
+      </div>
+      <div class="field"><label>Quantity Going Out</label><input id="deductQty" type="number" value="10" min="1"/></div>
+      <div class="field"><label>Reason</label>
+        <select id="deductReason">
+          <option value="damaged">Damaged / Expired</option>
+          <option value="manual_sale">Manual Sale</option>
+          <option value="theft">Shrinkage / Theft</option>
+          <option value="sample">Sample / Promo</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addDeduction()" style="width:100%">📤 Record Deduction</button>
+      <div class="msg msg-ok" id="deductOk"></div>
+      <div class="msg msg-err" id="deductErr"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <div class="card-title">
+      Full Inventory Table
+      <div class="tabs-row" style="margin:0">
+        <button class="tab-btn active" onclick="filterInv('all',this)">All</button>
+        <button class="tab-btn" onclick="filterInv('critical',this)">🔴 Critical</button>
+        <button class="tab-btn" onclick="filterInv('low',this)">🟡 Low</button>
+        <button class="tab-btn" onclick="filterInv('good',this)">🟢 Good</button>
+      </div>
+    </div>
+    <div id="invTableWrap"><div class="empty"><div class="empty-icon">⏳</div><p>Loading…</p></div></div>
+  </div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <div class="card-title">📋 Stock Movement Log</div>
+    <div id="movLogWrap"><div class="empty"><div class="empty-icon">⏳</div><p>Loading…</p></div></div>
+  </div>
+</div>
+
+<!-- ══ OPTIMIZE PAGE ══ -->
+<div id="page-optimize" class="page">
+  <div class="page-header"><h1>Self Optimization</h1><p>AI-powered suggestions — shelf placement · discounts · reorder recommendations</p></div>
+  <div class="refresh-bar"><div class="spinner" id="optSpin"></div><span id="optTime">—</span><button class="btn-sm" onclick="loadOptimize()">↻ Refresh</button></div>
+
+  <div class="kpi-row">
+    <div class="kpi c-red"><div class="kpi-label">Actions Needed</div><div class="kpi-val" id="oActions">—</div><div class="kpi-sub">Urgent optimizations</div></div>
+    <div class="kpi c-gold"><div class="kpi-label">Slow Movers</div><div class="kpi-val" id="oSlow">—</div><div class="kpi-sub">Low sales products</div></div>
+    <div class="kpi c-green"><div class="kpi-label">Reorder Now</div><div class="kpi-val" id="oReorder">—</div><div class="kpi-sub">Below threshold</div></div>
+    <div class="kpi c-blue"><div class="kpi-label">Discount Suggested</div><div class="kpi-val" id="oDiscount">—</div><div class="kpi-sub">Excess stock</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.25rem">
+    <div class="card-title">🧠 Optimization Recommendations</div>
+    <div id="optCardsWrap"><div class="empty"><div class="empty-icon">⏳</div><p>Analyzing inventory & sales data…</p></div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><div class="card-title">Sales Velocity (Units/Day)</div><canvas id="oVelChart"></canvas></div>
+    <div class="card"><div class="card-title">Stock vs Sales Comparison</div><canvas id="oCompChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Full Optimization Report</div>
+    <div id="optTableWrap"><div class="empty"><div class="empty-icon">⏳</div><p>Loading…</p></div></div>
+  </div>
+</div>
+
+<!-- ══ MY ORDERS PAGE ══ -->
+<div id="page-myorders" class="page">
+  <div class="page-header"><h1>My Orders</h1><p>Enter your name to see your order history</p></div>
+  <div style="display:flex;gap:.75rem;margin-bottom:1.5rem;max-width:420px">
+    <input id="lookupName" type="text" placeholder="Your name (e.g. Ahmed Khan)"/>
+    <button class="btn btn-blue" style="width:auto;white-space:nowrap" onclick="lookupOrders()">🔍 Search</button>
+  </div>
+  <div id="myOrdersWrap"><div class="empty"><div class="empty-icon">🔍</div><p>Enter your name above</p></div></div>
+</div>
+
+<!-- ══ ADMIN PAGE ══ -->
+<div id="page-admin" class="page">
+  <div class="page-header"><h1>Admin Panel</h1><p>Full system overview</p></div>
+  <div class="admin-lock" id="adminLock">
+    <h2>🔐 Admin Access</h2><p>Enter password to view all data</p>
+    <div class="pin-wrap">
+      <input type="password" id="adminPin" placeholder="Password" onkeydown="if(event.key==='Enter')unlockAdmin()"/>
+      <button class="btn btn-dark" style="width:auto" onclick="unlockAdmin()">Unlock</button>
+    </div>
+    <p style="margin-top:.75rem;font-size:.78rem;color:var(--ink3)">Default: <code>admin123</code></p>
+  </div>
+  <div class="admin-panel" id="adminPanel">
+    <div class="refresh-bar"><div class="spinner" id="adSpin"></div><span id="adTime">—</span>
+      <button class="btn-sm" onclick="loadAdmin()">↻ Refresh</button>
+      <button class="btn-sm" onclick="lockAdmin()" style="color:var(--accent)">🔒 Lock</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi c-red"><div class="kpi-label">Total Orders</div><div class="kpi-val" id="adOrders">—</div></div>
+      <div class="kpi c-green"><div class="kpi-label">Items Sold</div><div class="kpi-val" id="adItems">—</div></div>
+      <div class="kpi c-blue"><div class="kpi-label">Revenue</div><div class="kpi-val" id="adRev">—</div></div>
+      <div class="kpi c-gold"><div class="kpi-label">Customers</div><div class="kpi-val" id="adCusts">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">All Orders</div>
+      <div id="adTableWrap"><div class="empty"><div class="empty-icon">📭</div><p>No orders</p></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ SUPABASE ═══
+const URL = "https://dpitgsqymozwppjjczcr.supabase.co";
+const KEY = "sb_publishable_b79-K3s2HtylDkApOylyeg_dpGX23cl";
+
+async function sb(path, opts={}) {
+  const r = await fetch(URL + path, {
+    ...opts,
+    headers: { 'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':opts.prefer||'',...(opts.headers||{}) }
+  });
+  const t = await r.text();
+  if (!r.ok) throw new Error(t);
+  return t ? JSON.parse(t) : [];
+}
+
+// ═══ PRODUCT DATA ═══
+const PRODS = {
+  "produce":["Banana","Bag of Organic Bananas","Organic Strawberries","Organic Baby Spinach","Large Lemon","Organic Avocado","Organic Hass Avocado","Strawberries","Limes","Organic Raspberries"],
+  "dairy eggs":["Organic Whole Milk","Organic Reduced Fat Milk","Organic Large Grade AA Eggs","0% Fat Free Milk","Salted Butter","Greek Yogurt","Cheddar Cheese","Cream Cheese","Heavy Whipping Cream","Almond Milk"],
+  "snacks":["Tortilla Chips","Organic Popcorn","Almonds","Granola Bar","Pretzels","Rice Cakes","Dark Chocolate","Peanut Butter Crackers","Trail Mix","Cheese Puffs"],
+  "beverages":["Sparkling Water","Orange Juice","Green Tea","Coconut Water","Cold Brew Coffee","Apple Juice","Lemonade","Kombucha","Sports Drink","Iced Tea"],
+  "frozen":["Frozen Mango Chunks","Edamame","Frozen Peas","Ice Cream Vanilla","Frozen Waffles","Chicken Nuggets","Frozen Pizza","Mixed Vegetables","Fish Fillets","Frozen Burritos"],
+  "pantry":["Extra Virgin Olive Oil","Honey","Brown Rice","Pasta","Tomato Sauce","Peanut Butter","Quinoa","Coconut Oil","Soy Sauce","White Vinegar"],
+  "bakery":["Sourdough Bread","Croissant","Bagels","Banana Bread","Whole Wheat Bread","Blueberry Muffin","Baguette","Cinnamon Roll","Dinner Rolls","Rye Bread"],
+  "canned goods":["Canned Tomatoes","Black Beans","Chickpeas","Canned Tuna","Corn","Coconut Milk","Lentils","Kidney Beans","Canned Soup","Artichoke Hearts"],
+  "deli":["Original Hummus","Guacamole","Smoked Salmon","Turkey Slices","Ham","Roasted Chicken","Feta Cheese","Prosciutto","Caprese Salad","Smoked Turkey"],
+  "dry goods pasta":["Spaghetti","Penne","Brown Rice Pasta","Lentil Pasta","Couscous","Orzo","Fettuccine","Rigatoni","Farfalle","Lasagna Sheets"],
+  "meat seafood":["Chicken Breast","Ground Beef","Atlantic Salmon","Shrimp","Tilapia","Pork Chops","Lamb Chops","Turkey Breast","Tuna Steak","Crab Cakes"],
+  "breakfast":["Oats","Granola","Pancake Mix","Maple Syrup","Chia Seeds","Flaxseeds","Breakfast Cereal","Almond Flour","Protein Powder","Quinoa Flakes"],
+  "personal care":["Shampoo","Conditioner","Face Wash","Body Lotion","Toothpaste","Deodorant","Sunscreen","Hand Soap","Face Moisturizer","Lip Balm"],
+  "household":["Dish Soap","Laundry Detergent","Paper Towels","Toilet Paper","Trash Bags","Sponges","Baking Soda","Rubber Gloves","Dryer Sheets","Air Freshener"],
+  "international":["Miso Paste","Thai Fish Sauce","Harissa Paste","Tahini","Curry Paste","Sriracha","Mango Chutney","Kimchi","Nori Sheets","Tamarind Paste"]
+};
+const PRICES = {};
+Object.keys(PRODS).forEach(cat=>PRODS[cat].forEach(p=>{ PRICES[p]=Math.round((Math.random()*800+100)/10)*10; }));
+const ALL_PRODS = Object.entries(PRODS).flatMap(([cat,prods])=>prods.map(p=>({name:p,cat})));
+
+// ═══ CART ═══
+let cart=[], custName='';
+
+function filterProducts(){
+  const cat=document.getElementById('catSelect').value;
+  const sel=document.getElementById('prodSelect');
+  sel.innerHTML='';
+  if(!cat){sel.innerHTML='<option>— Select Category First —</option>';return;}
+  (PRODS[cat]||[]).forEach(p=>{
+    const o=document.createElement('option');
+    o.value=p; o.textContent=p+' — PKR '+(PRICES[p]||200); sel.appendChild(o);
+  });
+}
+
+function addToCart(){
+  const name=document.getElementById('custName').value.trim();
+  const cat=document.getElementById('catSelect').value;
+  const prod=document.getElementById('prodSelect').value;
+  const qty=parseInt(document.getElementById('qty').value)||1;
+  if(!name){alert('Enter your name!');return;}
+  if(!cat||!prod||prod.includes('—')){alert('Select category & product!');return;}
+  if(!custName) custName=name;
+  const price=PRICES[prod]||200;
+  const ex=cart.find(x=>x.product_name===prod);
+  if(ex){ex.quantity+=qty;ex.total=ex.quantity*price;}
+  else cart.push({product_name:prod,category:cat,quantity:qty,price,total:qty*price});
+  renderCart();
+}
+
+function renderCart(){
+  const body=document.getElementById('cartBody');
+  if(cart.length===0){
+    body.innerHTML='<div class="cart-empty">Cart is empty</div>';
+    document.getElementById('cartTotalRow').style.display='none';
+    document.getElementById('nameConf').style.display='none';
+    document.getElementById('placeBtn').disabled=true;
+    document.getElementById('cartCount').textContent='(0)'; return;
+  }
+  body.innerHTML=cart.map((item,i)=>`
+    <div class="cart-item">
+      <div><div class="ci-name">${item.product_name}</div><div class="ci-qty">${item.quantity} × PKR ${item.price}</div></div>
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <span class="ci-price">PKR ${item.total}</span>
+        <span class="ci-del" onclick="removeCart(${i})">✕</span>
+      </div>
+    </div>`).join('');
+  const total=cart.reduce((s,x)=>s+x.total,0);
+  document.getElementById('cartTotal').textContent='PKR '+total.toLocaleString();
+  document.getElementById('cartTotalRow').style.display='flex';
+  document.getElementById('nameDisp').textContent=custName||document.getElementById('custName').value;
+  document.getElementById('nameConf').style.display='block';
+  document.getElementById('placeBtn').disabled=false;
+  document.getElementById('cartCount').textContent='('+cart.length+')';
+}
+
+function removeCart(i){cart.splice(i,1);renderCart();}
+
+async function placeOrder(){
+  const name=custName||document.getElementById('custName').value.trim();
+  if(!name||cart.length===0) return;
+  const btn=document.getElementById('placeBtn');
+  const ok=document.getElementById('orderOk');
+  const err=document.getElementById('orderErr');
+  btn.disabled=true; btn.textContent='Placing…';
+  ok.style.display='none'; err.style.display='none';
+  try {
+    // Save order rows
+    const rows=cart.map(item=>({customer_name:name,product_name:item.product_name,category:item.category,quantity:item.quantity,price:item.total}));
+    await sb('/rest/v1/orders',{method:'POST',prefer:'return=minimal',body:JSON.stringify(rows)});
+    // Deduct from inventory (for each cart item that exists in inventory)
+    for(const item of cart){
+      try{
+        const inv=await sb(`/rest/v1/inventory?product_name=eq.${encodeURIComponent(item.product_name)}&select=id,current_stock`);
+        if(inv && inv.length>0){
+          const newStock=Math.max(0,inv[0].current_stock-item.quantity);
+          await sb(`/rest/v1/inventory?id=eq.${inv[0].id}`,{method:'PATCH',prefer:'return=minimal',body:JSON.stringify({current_stock:newStock,updated_at:new Date().toISOString()})});
+          await sb('/rest/v1/stock_movements',{method:'POST',prefer:'return=minimal',body:JSON.stringify({product_name:item.product_name,category:item.category,movement_type:'sale',quantity:item.quantity,note:'Customer order: '+name})});
+        }
+      }catch(e){console.log('inventory update skipped for',item.product_name);}
+    }
+    ok.style.display='block';
+    ok.textContent=`✅ Order placed for ${name}! ${cart.length} product(s) ordered. Inventory updated.`;
+    cart=[]; custName=''; renderCart();
+    document.getElementById('custName').value='';
+  }catch(e){err.style.display='block';err.textContent='❌ Error: '+e.message;}
+  btn.disabled=false; btn.textContent='Place Order →';
+}
+
+// ═══ DASHBOARD ═══
+const DC={};const COLORS=['#ff4f1f','#2d7dd2','#06a77d','#f4a400','#9b5de5','#f15bb5','#00bbf9','#00f5d4','#fee440','#fb5607'];
+
+function destroyChart(id){if(DC[id]){DC[id].destroy();delete DC[id];}}
+
+async function loadDashboard(){
+  document.getElementById('dashSpin').style.display='inline-block';
+  try{
+    const orders=await sb('/rest/v1/orders?select=*&order=created_at.desc');
+    document.getElementById('dashTime').textContent='Refreshed: '+new Date().toLocaleTimeString();
+    if(!orders||orders.length===0){
+      ['dOrders','dItems','dRevenue','dCusts'].forEach(id=>document.getElementById(id).textContent='0');
+      document.getElementById('recentWrap').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>No orders yet</p></div>';
+      document.getElementById('dashSpin').style.display='none'; return;
+    }
+    document.getElementById('dOrders').textContent=orders.length;
+    document.getElementById('dItems').textContent=orders.reduce((s,x)=>s+x.quantity,0);
+    document.getElementById('dRevenue').textContent='PKR '+Math.round(orders.reduce((s,x)=>s+x.price,0)/1000)+'k';
+    document.getElementById('dCusts').textContent=new Set(orders.map(x=>x.customer_name)).size;
+    const byCat={};orders.forEach(o=>{byCat[o.category]=(byCat[o.category]||0)+o.quantity;});
+    const catL=Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]);
+    destroyChart('dCat');DC['dCat']=new Chart(document.getElementById('dCatChart'),{type:'bar',data:{labels:catL,datasets:[{data:catL.map(c=>byCat[c]),backgroundColor:catL.map((_,i)=>COLORS[i%COLORS.length]+'cc'),borderRadius:5}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:40,font:{size:9}}},y:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}});
+    const byDate={};orders.forEach(o=>{const d=o.created_at.slice(0,10);byDate[d]=(byDate[d]||0)+1;});
+    const dates=Object.keys(byDate).sort();
+    destroyChart('dTime');DC['dTime']=new Chart(document.getElementById('dTimeChart'),{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:[{data:dates.map(d=>byDate[d]),borderColor:'#ff4f1f',backgroundColor:'rgba(255,79,31,.07)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#ff4f1f'}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},responsive:true,maintainAspectRatio:true}});
+    const byProd={};orders.forEach(o=>{byProd[o.product_name]=(byProd[o.product_name]||0)+o.quantity;});
+    const topP=Object.keys(byProd).sort((a,b)=>byProd[b]-byProd[a]).slice(0,8);
+    destroyChart('dTop');DC['dTop']=new Chart(document.getElementById('dTopChart'),{type:'bar',data:{labels:topP.map(p=>p.length>16?p.slice(0,16)+'…':p),datasets:[{data:topP.map(p=>byProd[p]),backgroundColor:'rgba(45,125,210,.75)',borderRadius:5}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}});
+    const revCat={};orders.forEach(o=>{revCat[o.category]=(revCat[o.category]||0)+o.price;});
+    const rCats=Object.keys(revCat).sort((a,b)=>revCat[b]-revCat[a]);
+    destroyChart('dRev');DC['dRev']=new Chart(document.getElementById('dRevChart'),{type:'doughnut',data:{labels:rCats,datasets:[{data:rCats.map(c=>Math.round(revCat[c])),backgroundColor:rCats.map((_,i)=>COLORS[i%COLORS.length]+'cc'),borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'right',labels:{font:{size:10},color:'#5a5a50',boxWidth:12}}},responsive:true,maintainAspectRatio:true}});
+    document.getElementById('recentWrap').innerHTML=`<table><thead><tr><th>Customer</th><th>Product</th><th>Category</th><th>Qty</th><th>PKR</th><th>Time</th></tr></thead><tbody>${orders.slice(0,15).map(o=>`<tr><td><strong>${o.customer_name}</strong></td><td>${o.product_name}</td><td><span class="pill pill-blue">${o.category}</span></td><td>${o.quantity}</td><td style="color:var(--accent3);font-weight:600">${Math.round(o.price).toLocaleString()}</td><td style="color:var(--ink3);font-size:.74rem">${new Date(o.created_at).toLocaleString('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('')}</tbody></table>`;
+  }catch(e){document.getElementById('dashTime').textContent='Error: '+e.message;}
+  document.getElementById('dashSpin').style.display='none';
+}
+
+// ═══ INVENTORY ═══
+let invData=[];
+
+function stockStatus(item){
+  const pct=item.current_stock/item.max_stock;
+  if(item.current_stock<=item.reorder_level) return 'critical';
+  if(pct<0.35) return 'low';
+  return 'good';
+}
+
+function statusPill(status){
+  if(status==='critical') return '<span class="pill pill-red">🔴 Critical</span>';
+  if(status==='low') return '<span class="pill pill-gold">🟡 Low</span>';
+  return '<span class="pill pill-green">🟢 Good</span>';
+}
+
+function stockBar(item){
+  const pct=Math.min(100,Math.round(item.current_stock/item.max_stock*100));
+  const color=item.current_stock<=item.reorder_level?'var(--accent)':pct<35?'var(--accent4)':'var(--accent3)';
+  return `<div class="stock-bar-wrap"><div class="stock-bar-fill" style="width:${pct}%;background:${color}"></div></div> <span style="font-size:.72rem;color:var(--ink3)">${pct}%</span>`;
+}
+
+async function loadInventory(){
+  document.getElementById('invSpin').style.display='inline-block';
+  try{
+    invData=await sb('/rest/v1/inventory?select=*&order=current_stock.asc');
+    const movs=await sb('/rest/v1/stock_movements?select=*&order=created_at.desc&limit=50');
+    document.getElementById('invTime').textContent='Refreshed: '+new Date().toLocaleTimeString();
+    const crit=invData.filter(x=>stockStatus(x)==='critical');
+    const low=invData.filter(x=>stockStatus(x)==='low');
+    const good=invData.filter(x=>stockStatus(x)==='good');
+    document.getElementById('iTotal').textContent=invData.length;
+    document.getElementById('iGood').textContent=good.length;
+    document.getElementById('iLow').textContent=low.length;
+    document.getElementById('iCrit').textContent=crit.length;
+    // Alerts
+    const alertsWrap=document.getElementById('alertsWrap');
+    if(crit.length>0){
+      alertsWrap.innerHTML=`<div class="alert-banner"><div class="alert-icon">🚨</div><div class="alert-body"><strong>Critical Stock Alert — ${crit.length} product(s) below reorder level!</strong><p>${crit.map(x=>x.product_name+' ('+x.current_stock+' left)').join(' · ')}</p></div></div>`;
+    } else alertsWrap.innerHTML='';
+    // Stock level chart (top 12 by criticality)
+    const chartItems=invData.slice(0,12);
+    destroyChart('iLevel');DC['iLevel']=new Chart(document.getElementById('iLevelChart'),{
+      type:'bar',
+      data:{labels:chartItems.map(x=>x.product_name.length>14?x.product_name.slice(0,14)+'…':x.product_name),
+        datasets:[
+          {label:'Current Stock',data:chartItems.map(x=>x.current_stock),backgroundColor:chartItems.map(x=>stockStatus(x)==='critical'?'rgba(255,79,31,.7)':stockStatus(x)==='low'?'rgba(244,164,0,.7)':'rgba(6,167,125,.7)'),borderRadius:4},
+          {label:'Reorder Level',data:chartItems.map(x=>x.reorder_level),backgroundColor:'rgba(0,0,0,0)',borderColor:'rgba(255,79,31,.5)',borderWidth:2,type:'line',pointRadius:3}
+        ]},
+      options:{plugins:{legend:{labels:{font:{size:10},color:'#5a5a50'}}},scales:{x:{ticks:{maxRotation:40,font:{size:9}}},y:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}
+    });
+    // Movement chart
+    const inByDate={},outByDate={};
+    movs.forEach(m=>{const d=m.created_at.slice(0,10);if(m.movement_type==='restock'){inByDate[d]=(inByDate[d]||0)+m.quantity;}else{outByDate[d]=(outByDate[d]||0)+m.quantity;}});
+    const allDates=[...new Set([...Object.keys(inByDate),...Object.keys(outByDate)])].sort().slice(-14);
+    destroyChart('iMov');DC['iMov']=new Chart(document.getElementById('iMovChart'),{
+      type:'bar',
+      data:{labels:allDates.map(d=>d.slice(5)),datasets:[
+        {label:'Stock In',data:allDates.map(d=>inByDate[d]||0),backgroundColor:'rgba(6,167,125,.7)',borderRadius:3},
+        {label:'Stock Out',data:allDates.map(d=>outByDate[d]||0),backgroundColor:'rgba(255,79,31,.7)',borderRadius:3}
+      ]},
+      options:{plugins:{legend:{labels:{font:{size:10},color:'#5a5a50'}}},scales:{x:{ticks:{font:{size:9}}},y:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}
+    });
+    // Populate dropdowns
+    ['restockProd','deductProd'].forEach(id=>{
+      const sel=document.getElementById(id);
+      sel.innerHTML='<option>— Select Product —</option>';
+      invData.forEach(x=>{const o=document.createElement('option');o.value=x.product_name;o.textContent=x.product_name+' ('+x.current_stock+' in stock)';sel.appendChild(o);});
+    });
+    renderInvTable('all');
+    // Movement log
+    if(movs.length===0){document.getElementById('movLogWrap').innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>No movements recorded yet</p></div>';return;}
+    document.getElementById('movLogWrap').innerHTML=`<table><thead><tr><th>Product</th><th>Category</th><th>Type</th><th>Qty</th><th>Note</th><th>Time</th></tr></thead><tbody>${movs.map(m=>`<tr><td><strong>${m.product_name}</strong></td><td>${m.category}</td><td>${m.movement_type==='restock'?'<span class="pill pill-green">📥 In</span>':'<span class="pill pill-red">📤 Out</span>'}</td><td style="font-weight:700">${m.movement_type==='restock'?'+':'-'}${m.quantity}</td><td style="color:var(--ink2)">${m.note||'—'}</td><td style="color:var(--ink3);font-size:.74rem">${new Date(m.created_at).toLocaleString('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('')}</tbody></table>`;
+  }catch(e){console.error(e);}
+  document.getElementById('invSpin').style.display='none';
+}
+
+function renderInvTable(filter){
+  let items=invData;
+  if(filter==='critical') items=invData.filter(x=>stockStatus(x)==='critical');
+  else if(filter==='low') items=invData.filter(x=>stockStatus(x)==='low');
+  else if(filter==='good') items=invData.filter(x=>stockStatus(x)==='good');
+  if(items.length===0){document.getElementById('invTableWrap').innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>No items in this category</p></div>';return;}
+  document.getElementById('invTableWrap').innerHTML=`<table><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Reorder Level</th><th>Max Stock</th><th>Stock Bar</th><th>Status</th></tr></thead><tbody>${items.map(x=>`<tr><td><strong>${x.product_name}</strong></td><td><span class="pill pill-blue">${x.category}</span></td><td style="font-family:monospace;font-weight:700;color:${x.current_stock<=x.reorder_level?'var(--accent)':x.current_stock/x.max_stock<0.35?'var(--accent4)':'var(--accent3)'}">${x.current_stock}</td><td>${x.reorder_level}</td><td>${x.max_stock}</td><td>${stockBar(x)}</td><td>${statusPill(stockStatus(x))}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function filterInv(type,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderInvTable(type);
+}
+
+async function addRestock(){
+  const prod=document.getElementById('restockProd').value;
+  const qty=parseInt(document.getElementById('restockQty').value)||0;
+  const note=document.getElementById('restockNote').value||'Manual restock';
+  if(!prod||prod.includes('—')){alert('Select a product!');return;}
+  if(qty<=0){alert('Enter a valid quantity!');return;}
+  const ok=document.getElementById('restockOk');
+  const err=document.getElementById('restockErr');
+  ok.style.display='none'; err.style.display='none';
+  try{
+    const inv=await sb(`/rest/v1/inventory?product_name=eq.${encodeURIComponent(prod)}&select=id,current_stock,max_stock,category`);
+    if(!inv||inv.length===0){err.style.display='block';err.textContent='Product not found in inventory.';return;}
+    const newStock=Math.min(inv[0].max_stock,inv[0].current_stock+qty);
+    await sb(`/rest/v1/inventory?id=eq.${inv[0].id}`,{method:'PATCH',prefer:'return=minimal',body:JSON.stringify({current_stock:newStock,updated_at:new Date().toISOString()})});
+    await sb('/rest/v1/stock_movements',{method:'POST',prefer:'return=minimal',body:JSON.stringify({product_name:prod,category:inv[0].category,movement_type:'restock',quantity:qty,note})});
+    ok.style.display='block'; ok.textContent=`✅ Restocked! ${prod}: ${inv[0].current_stock} → ${newStock} units`;
+    loadInventory();
+  }catch(e){err.style.display='block';err.textContent='❌ '+e.message;}
+}
+
+async function addDeduction(){
+  const prod=document.getElementById('deductProd').value;
+  const qty=parseInt(document.getElementById('deductQty').value)||0;
+  const reason=document.getElementById('deductReason').value;
+  if(!prod||prod.includes('—')){alert('Select a product!');return;}
+  if(qty<=0){alert('Enter a valid quantity!');return;}
+  const ok=document.getElementById('deductOk');
+  const err=document.getElementById('deductErr');
+  ok.style.display='none'; err.style.display='none';
+  try{
+    const inv=await sb(`/rest/v1/inventory?product_name=eq.${encodeURIComponent(prod)}&select=id,current_stock,category`);
+    if(!inv||inv.length===0){err.style.display='block';err.textContent='Product not found.';return;}
+    const newStock=Math.max(0,inv[0].current_stock-qty);
+    await sb(`/rest/v1/inventory?id=eq.${inv[0].id}`,{method:'PATCH',prefer:'return=minimal',body:JSON.stringify({current_stock:newStock,updated_at:new Date().toISOString()})});
+    await sb('/rest/v1/stock_movements',{method:'POST',prefer:'return=minimal',body:JSON.stringify({product_name:prod,category:inv[0].category,movement_type:'deduction',quantity:qty,note:'Manual: '+reason})});
+    ok.style.display='block'; ok.textContent=`✅ Deducted! ${prod}: ${inv[0].current_stock} → ${newStock} units`;
+    loadInventory();
+  }catch(e){err.style.display='block';err.textContent='❌ '+e.message;}
+}
+
+// ═══ OPTIMIZE ═══
+async function loadOptimize(){
+  document.getElementById('optSpin').style.display='inline-block';
+  try{
+    const inv=await sb('/rest/v1/inventory?select=*&order=current_stock.asc');
+    const orders=await sb('/rest/v1/orders?select=product_name,quantity,created_at');
+    document.getElementById('optTime').textContent='Analyzed: '+new Date().toLocaleTimeString();
+    // Sales velocity per product
+    const salesMap={};
+    orders.forEach(o=>{salesMap[o.product_name]=(salesMap[o.product_name]||0)+o.quantity;});
+    const dayRange=orders.length>0?Math.max(1,Math.ceil((Date.now()-new Date(orders[orders.length-1]?.created_at||Date.now()).getTime())/86400000)):1;
+    // Build optimization report per product
+    const report=inv.map(item=>{
+      const totalSales=salesMap[item.product_name]||0;
+      const velocity=parseFloat((totalSales/dayRange).toFixed(2));
+      const daysLeft=velocity>0?Math.floor(item.current_stock/velocity):999;
+      const status=stockStatus(item);
+      const stockPct=item.current_stock/item.max_stock;
+      // Determine action
+      let action='ok', actionLabel='✅ Healthy', priority=0;
+      const suggestions=[];
+      if(status==='critical'){action='reorder';actionLabel='🔴 Reorder Now';priority=3;suggestions.push('Stock critically low — place purchase order immediately');}
+      else if(status==='low'){action='reorder';actionLabel='🟡 Reorder Soon';priority=2;suggestions.push('Stock below safe level — schedule restock within 2 days');}
+      if(totalSales===0&&stockPct>0.6){action=action==='ok'?'discount':'reorder';actionLabel=action==='reorder'?actionLabel:'🔵 Promote';priority=Math.max(priority,1);suggestions.push('Zero sales recorded — move to front shelf, add promotional tag');}
+      else if(velocity<0.3&&stockPct>0.5){suggestions.push('Slow mover — consider discount of 15–20% or front-shelf placement');}
+      if(daysLeft<5&&daysLeft<999){suggestions.push(`Only ~${daysLeft} days of stock remaining at current sales rate`);}
+      if(stockPct>0.85&&velocity>1){suggestions.push('High stock + high sales — no action needed, consider increasing max stock');}
+      return {...item,totalSales,velocity,daysLeft,status,action,actionLabel,priority,suggestions};
+    }).sort((a,b)=>b.priority-a.priority);
+
+    const urgent=report.filter(x=>x.priority>=2);
+    const slowMovers=report.filter(x=>x.velocity<0.3);
+    const reorderNow=report.filter(x=>x.status==='critical');
+    const discountNeeded=report.filter(x=>x.totalSales===0||x.velocity<0.3&&x.current_stock/x.max_stock>0.5);
+    document.getElementById('oActions').textContent=urgent.length;
+    document.getElementById('oSlow').textContent=slowMovers.length;
+    document.getElementById('oReorder').textContent=reorderNow.length;
+    document.getElementById('oDiscount').textContent=discountNeeded.length;
+
+    // Recommendation cards
+    const cardsWrap=document.getElementById('optCardsWrap');
+    if(report.length===0){cardsWrap.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>No inventory data. Add products first.</p></div>';document.getElementById('optSpin').style.display='none';return;}
+    const topRecs=report.filter(x=>x.suggestions.length>0).slice(0,9);
+    cardsWrap.innerHTML=`<div class="opt-grid">${topRecs.map(item=>{
+      const cls=item.priority>=2?'urgent':item.priority===1?'warn':'ok';
+      const tagHtml=item.status==='critical'?'<span class="opt-tag tag-reorder">REORDER NOW</span>':
+        item.totalSales===0?'<span class="opt-tag tag-front">FRONT SHELF</span><span class="opt-tag tag-discount">DISCOUNT</span>':
+        item.velocity<0.3?'<span class="opt-tag tag-discount">SLOW MOVER</span>':'<span class="opt-tag tag-ok">HEALTHY</span>';
+      return `<div class="opt-card ${cls}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.35rem">
+          <h4>${item.product_name}</h4><span style="font-size:.72rem;color:var(--ink3)">${item.actionLabel}</span>
+        </div>
+        ${tagHtml}
+        <p>${item.suggestions.join('<br/>')}</p>
+        <div style="display:flex;gap:1rem;font-size:.72rem;color:var(--ink3)">
+          <span>📦 Stock: <strong style="color:var(--ink)">${item.current_stock}</strong></span>
+          <span>📈 Sales: <strong style="color:var(--ink)">${item.totalSales}</strong></span>
+          <span>⚡ ${item.velocity}/day</span>
+        </div>
+      </div>`;}).join('')}</div>`;
+
+    // Velocity chart
+    const velItems=report.filter(x=>x.totalSales>0).sort((a,b)=>b.velocity-a.velocity).slice(0,10);
+    const slowItems=report.filter(x=>x.totalSales===0||x.velocity<0.5).slice(0,10);
+    destroyChart('oVel');DC['oVel']=new Chart(document.getElementById('oVelChart'),{
+      type:'bar',
+      data:{labels:velItems.map(x=>x.product_name.length>14?x.product_name.slice(0,14)+'…':x.product_name),datasets:[{label:'Units/Day',data:velItems.map(x=>x.velocity),backgroundColor:'rgba(45,125,210,.7)',borderRadius:4}]},
+      options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}
+    });
+    // Stock vs Sales chart
+    const compItems=report.slice(0,10);
+    destroyChart('oComp');DC['oComp']=new Chart(document.getElementById('oCompChart'),{
+      type:'bar',
+      data:{labels:compItems.map(x=>x.product_name.length>12?x.product_name.slice(0,12)+'…':x.product_name),
+        datasets:[
+          {label:'Current Stock',data:compItems.map(x=>x.current_stock),backgroundColor:'rgba(6,167,125,.65)',borderRadius:3},
+          {label:'Total Sales',data:compItems.map(x=>x.totalSales),backgroundColor:'rgba(255,79,31,.65)',borderRadius:3}
+        ]},
+      options:{plugins:{legend:{labels:{font:{size:10},color:'#5a5a50'}}},scales:{x:{ticks:{maxRotation:40,font:{size:9}}},y:{beginAtZero:true}},responsive:true,maintainAspectRatio:true}
+    });
+
+    // Full table
+    document.getElementById('optTableWrap').innerHTML=`<table><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Total Sales</th><th>Velocity/Day</th><th>Days Left</th><th>Action</th><th>Recommendation</th></tr></thead><tbody>${report.map(x=>`<tr>
+      <td><strong>${x.product_name}</strong></td>
+      <td><span class="pill pill-blue">${x.category}</span></td>
+      <td style="font-weight:700;color:${x.status==='critical'?'var(--accent)':x.status==='low'?'var(--accent4)':'var(--accent3)'}">${x.current_stock}</td>
+      <td>${x.totalSales}</td>
+      <td>${x.velocity}</td>
+      <td style="color:${x.daysLeft<5&&x.daysLeft<999?'var(--accent)':'var(--ink)'};font-weight:${x.daysLeft<5&&x.daysLeft<999?700:400}">${x.daysLeft===999?'∞':x.daysLeft+' days'}</td>
+      <td>${x.actionLabel}</td>
+      <td style="font-size:.76rem;color:var(--ink2)">${x.suggestions[0]||'—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }catch(e){console.error(e);}
+  document.getElementById('optSpin').style.display='none';
+}
+
+// ═══ MY ORDERS ═══
+async function lookupOrders(){
+  const name=document.getElementById('lookupName').value.trim();
+  if(!name){alert('Enter your name!');return;}
+  const wrap=document.getElementById('myOrdersWrap');
+  wrap.innerHTML='<div class="empty"><div class="empty-icon">⏳</div><p>Searching…</p></div>';
+  try{
+    const orders=await sb(`/rest/v1/orders?customer_name=ilike.${encodeURIComponent('*'+name+'*')}&order=created_at.desc&select=*`);
+    if(!orders||orders.length===0){wrap.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><p>No orders for "<strong>${name}</strong>"</p></div>`;return;}
+    const totalSpent=orders.reduce((s,x)=>s+x.price,0);
+    wrap.innerHTML=`<div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
+      <div class="kpi c-red"><div class="kpi-label">Orders</div><div class="kpi-val">${orders.length}</div></div>
+      <div class="kpi c-green"><div class="kpi-label">Items</div><div class="kpi-val">${orders.reduce((s,x)=>s+x.quantity,0)}</div></div>
+      <div class="kpi c-blue"><div class="kpi-label">Spent</div><div class="kpi-val">PKR ${Math.round(totalSpent/1000)}k</div></div>
+    </div>
+    <div class="card"><div class="card-title">Order History — ${name}</div>
+    <table><thead><tr><th>#</th><th>Product</th><th>Category</th><th>Qty</th><th>PKR</th><th>Date</th></tr></thead>
+    <tbody>${orders.map((o,i)=>`<tr><td style="color:var(--ink3)">${i+1}</td><td><strong>${o.product_name}</strong></td><td><span class="pill pill-blue">${o.category}</span></td><td>${o.quantity}</td><td style="color:var(--accent3);font-weight:700">${Math.round(o.price).toLocaleString()}</td><td style="color:var(--ink3);font-size:.76rem">${new Date(o.created_at).toLocaleString('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('')}</tbody></table></div>`;
+  }catch(e){wrap.innerHTML=`<div class="empty"><div class="empty-icon">❌</div><p>Error: ${e.message}</p></div>`;}
+}
+
+// ═══ ADMIN ═══
+function unlockAdmin(){if(document.getElementById('adminPin').value==='admin123'){document.getElementById('adminLock').style.display='none';document.getElementById('adminPanel').style.display='block';loadAdmin();}else alert('Wrong password! Try: admin123');}
+function lockAdmin(){document.getElementById('adminLock').style.display='block';document.getElementById('adminPanel').style.display='none';document.getElementById('adminPin').value='';}
+
+async function loadAdmin(){
+  document.getElementById('adSpin').style.display='inline-block';
+  try{
+    const orders=await sb('/rest/v1/orders?select=*&order=created_at.desc');
+    document.getElementById('adTime').textContent='Refreshed: '+new Date().toLocaleTimeString();
+    document.getElementById('adOrders').textContent=orders.length;
+    document.getElementById('adItems').textContent=orders.reduce((s,x)=>s+x.quantity,0);
+    document.getElementById('adRev').textContent='PKR '+Math.round(orders.reduce((s,x)=>s+x.price,0)).toLocaleString();
+    document.getElementById('adCusts').textContent=new Set(orders.map(x=>x.customer_name)).size;
+    if(!orders.length){document.getElementById('adTableWrap').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>No orders</p></div>';document.getElementById('adSpin').style.display='none';return;}
+    document.getElementById('adTableWrap').innerHTML=`<table><thead><tr><th>ID</th><th>Customer</th><th>Product</th><th>Category</th><th>Qty</th><th>PKR</th><th>Date & Time</th></tr></thead><tbody>${orders.map(o=>`<tr><td style="font-size:.7rem;color:var(--ink3);font-family:monospace">${o.id.slice(0,8)}…</td><td><strong>${o.customer_name}</strong></td><td>${o.product_name}</td><td><span class="pill pill-blue">${o.category}</span></td><td>${o.quantity}</td><td style="color:var(--accent3);font-weight:700">${Math.round(o.price).toLocaleString()}</td><td style="color:var(--ink3);font-size:.74rem">${new Date(o.created_at).toLocaleString()}</td></tr>`).join('')}</tbody></table>`;
+  }catch(e){document.getElementById('adTime').textContent='Error: '+e.message;}
+  document.getElementById('adSpin').style.display='none';
+}
+
+// ═══ NAVIGATION ═══
+function nav(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='dashboard') loadDashboard();
+  if(id==='inventory') loadInventory();
+  if(id==='optimize') loadOptimize();
+}
+
+// Auto-refresh dashboard every 15s
+setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();},15000);
+</script>
+</body>
+</html>
